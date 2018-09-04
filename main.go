@@ -238,6 +238,9 @@ func main() {
 	r.GET("/roles", listRoles(conf, r))
 	r.GET("/success", success)
 	r.POST("/login", login(conf))
+	r.GET("/_internal_/healthcheck", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
 	r.GET("/", func(c *gin.Context) {
 		sesh := sessions.Default(c)
 		tok := sesh.Get(sessionKey)
