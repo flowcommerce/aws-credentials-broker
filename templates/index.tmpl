@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AWS Credentials Broker</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+
+  <script type="application/javascript" src="/dist/js/react.production.min.js"></script>
+  <script type="application/javascript" src="/dist/js/react-dom.production.min.js"></script>
+  <script type="application/javascript" src="/dist/js/babel.js"></script>
+  <script type="application/javascript" src="/dist/js/lodash.min.js"></script>
+  <script type="text/babel" src="/dist/js/app.jsx"></script>
+
+  <style>
+    #container {
+      padding: 5px 40px;
+      width: 950px;
+      text-align: left;
+      margin: 0 auto;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    #header {
+      border-bottom: 1px solid rgb(204, 204, 204);
+      padding: 9px 0 15px;
+    }
+
+    #content {
+      padding: 16px 0;
+    }
+
+    #footer {
+      display: flex;
+      justify-content: center;
+
+      border-top: 1px solid rgb(204, 204, 204);
+      text-align: center;
+    }
+
+    #footer small {
+      padding-top: 10px;
+      font-size: 12px;
+      color: #7f8184;
+    }
+
+    .flex-container {
+      display: -ms-flexbox;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+      flex-direction: column;
+      -webkit-flex-wrap: nowrap;
+      -ms-flex-wrap: nowrap;
+      flex-wrap: nowrap;
+      -webkit-justify-content: flex-start;
+      -ms-flex-pack: start;
+      justify-content: flex-start;
+      -webkit-align-content: stretch;
+      -ms-flex-line-pack: stretch;
+      align-content: stretch;
+      -webkit-align-items: stretch;
+      -ms-flex-align: stretch;
+      align-items: stretch;
+    }
+
+    .flex-item {
+      -webkit-order: 0;
+      -ms-flex-order: 0;
+      order: 0;
+      -webkit-flex: 0 1 auto;
+      -ms-flex: 0 1 auto;
+      flex: 0 1 auto;
+      -webkit-align-self: auto;
+      -ms-flex-item-align: auto;
+      align-self: auto;
+    }
+
+    .account {
+      margin: 2em 1em;
+    }
+
+    .role {
+      padding: 1em 0.5em;
+      cursor: pointer;
+      width: 500px;
+    }
+
+    .signIn {
+      width: 300px;
+      height: 30px;
+      border-radius: 6px;
+      background-color: #0051b2;
+      color: #ffffff;
+      font-size: 15px;
+      cursor: pointer;
+      margin: 1em;
+
+      -webkit-align-self: center;
+      -ms-flex-item-align: center;
+      align-self: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script id="roles" type="application/json">{{ .roles_json }}</script>
+</body>
+
+</html>
