@@ -9,13 +9,7 @@ ARG VERSION
 COPY . /go/src/github.com/flowcommerce/aws-credentials-broker
 RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && make release-binary VERSION=${VERSION}
 
-FROM alpine:3.7
-# OIDC connectors require root certificates.
-# Proper installations should manage those certificates, but it's a bad user
-# experience when this doesn't work out of the box.
-#
-# OpenSSL is required so wget can query HTTPS endpoints for health checking.
-RUN apk add --update ca-certificates openssl
+FROM flowdocker/play:0.1.3
 
 WORKDIR /usr/local/bin
 
@@ -23,4 +17,4 @@ COPY --from=builder /go/bin/aws-credentials-broker /usr/local/bin/aws-credential
 
 EXPOSE 8234
 
-ENTRYPOINT ["aws-credentials-broker"]
+ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "aws-credentials-broker", "aws-credentials-broker"]
