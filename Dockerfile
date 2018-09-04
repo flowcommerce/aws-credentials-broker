@@ -14,6 +14,7 @@ FROM flowdocker/play:0.1.3
 WORKDIR /usr/local/bin
 
 COPY --from=builder /go/bin/aws-credentials-broker /usr/local/bin/aws-credentials-broker
+COPY --from=builder /go/src/github.com/flowcommerce/aws-credentials-broker/templates /usr/local/bin/templates
 
 EXPOSE 8234
 
