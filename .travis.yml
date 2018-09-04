@@ -1,0 +1,15 @@
+sudo: false
+language: go
+services:
+  - docker
+go:
+  - 1.10
+before_script:
+  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - go get -u github.com/golang/dep/cmd/dep
+script:
+  - dep ensure
+  - go build
+branches:
+  only:
+    - master

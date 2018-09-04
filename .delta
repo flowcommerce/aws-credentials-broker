@@ -1,0 +1,6 @@
+builds:
+  - root:
+      instance.type: t2.nano
+      port.container: 8234
+      port.host: 8234
+      version: 1.3
