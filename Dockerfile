@@ -1,7 +1,7 @@
-FROM golang:1.10.3-alpine3.7 AS builder
+FROM golang:1.10.3 AS builder
 
-RUN apk update && \
-  apk add --no-cache --update alpine-sdk git && \
+RUN apt-get update && \
+  apt-get install git && \
   go get -u github.com/golang/dep/cmd/dep
 
 ARG VERSION
