@@ -17,4 +17,4 @@ COPY --from=builder /go/bin/aws-credentials-broker /usr/local/bin/aws-credential
 
 EXPOSE 8234
 
-ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "aws-credentials-broker", "aws-credentials-broker"]
+ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "aws-credentials-broker", "/usr/local/bin/aws-credentials-broker"]
