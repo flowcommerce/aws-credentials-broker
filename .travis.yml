@@ -6,7 +6,7 @@ go:
   - 1.10
 before_script:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-  - go get -u github.com/golang/dep/cmd/dep
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 script:
   - dep ensure
   - go build
