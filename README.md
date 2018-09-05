@@ -1,5 +1,16 @@
 # aws-credentials-broker
-AWS Credentials Broker - Manages temporary AWS credentials for Google
+
+AWS Credentials Broker - Grants temporary AWS credentials for Google federated users
+
+This app when deployed in your AWS account can grant STS credentials to Google SAML federated users for use in the AWS CLI.
+The flow is as follows:
+
+- CLI directs users to the broker, for example https://aws-credentials-broker.example.org?callback_uri=http://localhost:1234.
+- The aws-credentials-broker uses its Google OAuth2 client credentials to initiate the OpenID Connect (OIDC) credentials flow.
+- Once a user has authenticated with Google, aws-credentials-broker uses its Google Admin Serive Account User to list the SAML roles associated with the authenticated user.
+- If the user has more than one account/role pair, a UI allows them to choose the account & role to assume.
+- When a user picks an account & role to assume the OIDC token granted by Google for the user is used with AWS to grant temporary credentials to the federated user.
+- The `callback_uri` is called with the STS credentials to store in the users' `~/.aws/credentials` file.
 
 # Getting Started
 
