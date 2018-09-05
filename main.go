@@ -237,8 +237,7 @@ func main() {
 		IENoOpen:              true,
 		FrameDeny:             true,
 		BrowserXssFilter:      true,
-		ContentTypeNosniff:    true,
-		ContentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com;",
+		ContentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com;",
 		ReferrerPolicy:        "strict-origin-when-cross-origin",
 	}))
 
