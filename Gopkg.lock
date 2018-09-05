@@ -10,7 +10,7 @@
   version = "v0.26.0"
 
 [[projects]]
-  digest = "1:bf98547eb6ce5b983d2b00ee95b2e23f00a692d6cdc232111ff70b94dc25f328"
+  digest = "1:55c1331fb71f26dc210bf3722ff3d2af61e6bfd5ec8cbac887a5da373c067b1b"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -39,7 +39,6 @@
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
-    "service/iam",
     "service/sts",
   ]
   pruneopts = "UT"
@@ -224,13 +223,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:98f1f178a11bc25feb91f9127a9c22672a2c9f800a00702e1a980015bfcb6b83"
+  digest = "1:81780052bc5f881f4d511e0f4be0d2d303f8f2e05e755e78d512ffb1ffe6cfff"
   name = "google.golang.org/api"
   packages = [
     "admin/directory/v1",
     "gensupport",
     "googleapi",
     "googleapi/internal/uritemplates",
+    "googleapi/transport",
   ]
   pruneopts = "UT"
   revision = "b810576d88a056b90ef18a0b5328544c9c074c68"
@@ -276,7 +276,7 @@
   input-imports = [
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/session",
-    "github.com/aws/aws-sdk-go/service/iam",
+    "github.com/aws/aws-sdk-go/service/sts",
     "github.com/gin-contrib/cors",
     "github.com/gin-contrib/secure",
     "github.com/gin-contrib/sessions",
@@ -286,6 +286,7 @@
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/google",
     "google.golang.org/api/admin/directory/v1",
+    "google.golang.org/api/googleapi/transport",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

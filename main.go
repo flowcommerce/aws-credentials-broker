@@ -68,7 +68,7 @@ func callback(conf *oauth2.Config) gin.HandlerFunc {
 	}
 }
 
-func listRoles(conf *oauth2.Config, ngin *gin.Engine) gin.HandlerFunc {
+func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUserConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sesh := sessions.Default(c)
 		accessToken := sesh.Get(sessionKey)
@@ -77,7 +77,7 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine) gin.HandlerFunc {
 			return
 		}
 
-		user, err := utils.GetUserRoles(accessToken.(string), conf)
+		user, err := utils.GetUserRoles(accessToken.(string), conf, adminConf)
 		if err != nil {
 			log.Panic(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -130,7 +130,7 @@ func success(c *gin.Context) {
 	})
 }
 
-func login(conf *oauth2.Config) gin.HandlerFunc {
+func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestedRoleArn := c.PostForm("role")
 
@@ -142,7 +142,7 @@ func login(conf *oauth2.Config) gin.HandlerFunc {
 			return
 		}
 
-		user, err := utils.GetUserRoles(accessToken.(string), conf)
+		user, err := utils.GetUserRoles(accessToken.(string), conf, adminConf)
 		if err != nil {
 			log.Panic(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -211,9 +211,19 @@ func main() {
 		Scopes: []string{
 			"openid",
 			"email",
-			"https://www.googleapis.com/auth/admin.directory.user.readonly",
 		},
 		Endpoint: google.Endpoint,
+	}
+
+	pk, err := base64.StdEncoding.DecodeString(os.Getenv("GOOGLE_SA_PK"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	adminConf := &utils.AdminUserConfig{
+		Email:      os.Getenv("GOOGLE_SA_EMAIL"),
+		PrivateKey: pk,
+		AdminEmail: os.Getenv("GOOGLE_ADMIN_EMAIL"),
 	}
 
 	r := gin.New()
@@ -240,9 +250,9 @@ func main() {
 	r.LoadHTMLGlob("templates/*.tmpl")
 
 	r.GET("/oauth/google/callback", callback(conf))
-	r.GET("/roles", listRoles(conf, r))
+	r.GET("/roles", listRoles(conf, r, adminConf))
+	r.POST("/login", login(conf, adminConf))
 	r.GET("/success", success)
-	r.POST("/login", login(conf))
 	r.GET("/_internal_/healthcheck", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
