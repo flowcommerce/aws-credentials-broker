@@ -63,4 +63,5 @@ In our role we want to give to users, we need to edit the trust relationship pol
 | GOOGLE_CLIENT_SECRET   | The Google OAuth2 client secret                                                                            |
 | GOOGLE_SA_EMAIL        | The Google Service Account User email                                                                      |
 | GOOGLE_SA_PK           | The Google Service Account User private key, base64 encoded                                                |
+| HOSTED_DOMAIN          | The Google domain to filter users for, ignored if left blank (Optional)                                    |
 

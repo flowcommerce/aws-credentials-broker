@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -30,6 +32,11 @@ type RoleChoice struct {
 	Name string `json:"name"`
 }
 
+type IDToken struct {
+	Email string `json:"email"`
+	HostedDomain string `json:"hd"`
+}
+
 const (
 	sessionKey  = "_awscb"
 	idKey       = "_awscb_id"
@@ -37,7 +44,7 @@ const (
 	callbackKey = "_awscb_call"
 )
 
-func callback(conf *oauth2.Config) gin.HandlerFunc {
+func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Query("code")
 
@@ -48,13 +55,37 @@ func callback(conf *oauth2.Config) gin.HandlerFunc {
 			return
 		}
 
+		hdFilter := os.Getenv("HOSTED_DOMAIN")
+		idTok := tok.Extra("id_token").(string)
+		parts := strings.Split(idTok, ".")
+		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+		if err != nil {
+			log.Panic(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var idToken IDToken
+		if err := json.Unmarshal([]byte(payload), &idToken); err != nil {
+			log.Panic(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if hdFilter != "" && hdFilter != idToken.HostedDomain {
+			log.Println(fmt.Sprintf("[WARN] - User [%s] of domain [%s] cannot access [%s]", idToken.Email, idToken.HostedDomain, hdFilter))
+			c.Redirect(http.StatusTemporaryRedirect, "/forbidden")
+			return
+		}
+
 		expiresIn := tok.Expiry.Sub(time.Now())
 		sesh := sessions.Default(c)
-		sesh.Set(idKey, tok.Extra("id_token"))
+		sesh.Set(idKey, idTok)
 		sesh.Set(sessionKey, tok.AccessToken)
 		sesh.Options(sessions.Options{
 			MaxAge:   int(expiresIn.Seconds()) - 300, // Expire 5 minutes before the access token expires
 			HttpOnly: true,
+			Secure:   secure,
 			Path:     "/",
 		})
 		err = sesh.Save()
@@ -241,14 +272,17 @@ func main() {
 		ReferrerPolicy:        "strict-origin-when-cross-origin",
 	}))
 
+	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+	secure := !strings.Contains(allowedOrigin, "localhost")
+
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{os.Getenv("ALLOWED_ORIGIN")}
+	corsConfig.AllowOrigins = []string{allowedOrigin}
 	corsConfig.AllowMethods = []string{"POST"}
 	r.Use(cors.New(corsConfig))
 
 	r.LoadHTMLGlob("templates/*.tmpl")
 
-	r.GET("/oauth/google/callback", callback(conf))
+	r.GET("/oauth/google/callback", callback(conf, secure))
 	r.GET("/roles", listRoles(conf, r, adminConf))
 	r.POST("/login", login(conf, adminConf))
 	r.GET("/success", success)
