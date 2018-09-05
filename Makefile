@@ -26,7 +26,7 @@ build:
 	@echo "You can now use ./${BIN_NAME}"
 
 docker-build:
-	docker build -t $(DOCKER_IMAGE) --build-arg VERSION=$(VERSION) .
+	docker build --no-cache -t $(DOCKER_IMAGE) --build-arg VERSION=$(VERSION) .
 
 push:
 	docker push $(DOCKER_IMAGE)

@@ -1,3 +1,7 @@
+import React from 'react';
+import ReactDOM from "react-dom";
+import { map } from 'lodash';
+
 class App extends React.Component {
   render() {
     const accountsMap = JSON.parse(document.getElementById("roles").textContent);
@@ -6,12 +10,12 @@ class App extends React.Component {
     if(accountsMap.success) {
       content = <div style={{ textAlign: 'center', width: '100%' }}>Successfully assumed role! You can close this window now.</div>
     } else {
-      const accounts = _.map(account => (
+      const accounts = map(account => (
         <div className="account flex-item">
           <h2>Account: {account}</h2>
           <hr />
           <div className="flex-container">
-            {_.map(({ arn, name }) => (
+            {map(({ arn, name }) => (
               <div className="role flex-item">
                 <input type="radio" name="role" value={arn} /> {name}
               </div>

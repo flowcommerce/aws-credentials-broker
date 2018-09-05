@@ -1,3 +1,8 @@
+node_modules
+.cache
+templates/*.js
+templates/*.map
+templates/*.tmpl
 
 # Created by https://www.gitignore.io/api/go
 
