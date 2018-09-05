@@ -9,7 +9,7 @@
     "url": "git+https://github.com/flowcommerce/aws-credentials-broker.git"
   },
   "scripts": {
-    "build": "node_modules/.bin/parcel build public/index.html --out-dir templates --out-file index.tmpl"
+    "build": "node_modules/.bin/parcel build public/index.html --out-dir templates --out-file index.tmpl --public-url ./dist/"
   },
   "dependencies": {
     "lodash": "^4.17.10",
