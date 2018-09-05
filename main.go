@@ -32,6 +32,7 @@ type RoleChoice struct {
 
 const (
 	sessionKey  = "_awscb"
+	idKey       = "_awscb_id"
 	stateKey    = "_awscb_state"
 	callbackKey = "_awscb_call"
 )
@@ -49,6 +50,7 @@ func callback(conf *oauth2.Config) gin.HandlerFunc {
 
 		expiresIn := tok.Expiry.Sub(time.Now())
 		sesh := sessions.Default(c)
+		sesh.Set(idKey, tok.Extra("id_token"))
 		sesh.Set(sessionKey, tok.AccessToken)
 		sesh.Options(sessions.Options{
 			MaxAge:   int(expiresIn.Seconds()) - 300, // Expire 5 minutes before the access token expires
@@ -133,6 +135,7 @@ func login(conf *oauth2.Config) gin.HandlerFunc {
 		requestedRoleArn := c.PostForm("role")
 
 		sesh := sessions.Default(c)
+		idToken := sesh.Get(idKey)
 		accessToken := sesh.Get(sessionKey)
 		if accessToken == nil {
 			c.Redirect(http.StatusTemporaryRedirect, "/")
@@ -171,10 +174,11 @@ func login(conf *oauth2.Config) gin.HandlerFunc {
 
 		sess := session.Must(session.NewSession())
 		stsService := sts.New(sess)
-		resp, err := stsService.AssumeRole(&sts.AssumeRoleInput{
-			RoleArn:         aws.String(roleArn),
-			RoleSessionName: aws.String(user.User.Email),
-			DurationSeconds: aws.Int64(duration),
+		resp, err := stsService.AssumeRoleWithWebIdentity(&sts.AssumeRoleWithWebIdentityInput{
+			RoleArn:          aws.String(roleArn),
+			RoleSessionName:  aws.String(user.User.Email),
+			DurationSeconds:  aws.Int64(duration),
+			WebIdentityToken: aws.String(idToken.(string)),
 		})
 		if err != nil {
 			log.Panicf("User cannot assume role %v: %v", requestedRoleArn, err)
@@ -205,7 +209,8 @@ func main() {
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		RedirectURL:  os.Getenv("GOOGLE_CLIENT_REDIRECT"),
 		Scopes: []string{
-			"https://www.googleapis.com/auth/userinfo.email",
+			"openid",
+			"email",
 			"https://www.googleapis.com/auth/admin.directory.user.readonly",
 		},
 		Endpoint: google.Endpoint,
