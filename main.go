@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -33,7 +33,7 @@ type RoleChoice struct {
 }
 
 type IDToken struct {
-	Email string `json:"email"`
+	Email        string `json:"email"`
 	HostedDomain string `json:"hd"`
 }
 

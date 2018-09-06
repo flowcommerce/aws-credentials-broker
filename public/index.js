@@ -10,19 +10,19 @@ class App extends React.Component {
     if(accountsMap.success) {
       content = <div style={{ textAlign: 'center', width: '100%' }}>Successfully assumed role! You can close this window now.</div>
     } else {
-      const accounts = map(account => (
+      const accounts = map(Object.keys(accountsMap), account => (
         <div className="account flex-item">
           <h2>Account: {account}</h2>
           <hr />
           <div className="flex-container">
-            {map(({ arn, name }) => (
+            {map(accountsMap[account], ({ arn, name }) => (
               <div className="role flex-item">
                 <input type="radio" name="role" value={arn} /> {name}
               </div>
-            ), accountsMap[account])}
+            ))}
           </div>
         </div>
-      ), Object.keys(accountsMap))
+      ));
 
       content = (
         <form method="POST" action="/login">
