@@ -1,5 +1,5 @@
 # Build the Go App
-FROM golang:1.10.3 AS go-builder
+FROM golang:1.11 AS go-builder
 
 RUN apt-get update && \
   apt-get install git && \
