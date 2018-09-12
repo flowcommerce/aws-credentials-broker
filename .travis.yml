@@ -1,0 +1,19 @@
+sudo: false
+language: go
+services:
+  - docker
+go:
+  - 1.11
+git:
+  depth: 1
+
+install: true
+
+before_script:
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+script:
+  - dep ensure
+  - go test -v ./...
+branches:
+  only:
+    - master
