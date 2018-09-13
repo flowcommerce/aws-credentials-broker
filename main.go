@@ -42,6 +42,7 @@ const (
 	idKey       = "_awscb_id"
 	stateKey    = "_awscb_state"
 	callbackKey = "_awscb_call"
+	stateError  = "Unexpected state. Secure session cookies are missing... Please try again."
 )
 
 func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
@@ -217,13 +218,25 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 			return
 		}
 
-		cred := resp.Credentials
-		callbackURI := sesh.Get(callbackKey)
-		uri, err := url.Parse(callbackURI.(string))
-		if err != nil {
-			log.Fatal(err)
+		callbackURI := fmt.Sprintf("%v", sesh.Get(callbackKey))
+		if callbackURI == "<nil>" || callbackURI == "" {
+			log.Printf("No callback URI cookie:%v", err)
+			c.HTML(http.StatusOK, "index.tmpl", gin.H{
+				"roles_json": gin.H{"error": stateError},
+			})
+			return
 		}
 
+		uri, err := url.Parse(callbackURI)
+		if err != nil {
+			log.Printf("No callback URI cookie:%v", err)
+			c.HTML(http.StatusOK, "index.tmpl", gin.H{
+				"roles_json": gin.H{"error": stateError},
+			})
+			return
+		}
+
+		cred := resp.Credentials
 		parameters := url.Values{}
 		parameters.Add("access_key_id", *cred.AccessKeyId)
 		parameters.Add("secret_access_key", *cred.SecretAccessKey)
@@ -297,8 +310,10 @@ func main() {
 			// We need to make sure we're only calling loopback addresses as we only want to post to CLIs
 			match, _ := regexp.MatchString(`^https?://(127(\.\d+){1,3}|localhost)(:[0-9]+)?.*?$`, callbackURI)
 			if !match {
-				log.Panic("You must provide a loopback address as the callback uri")
-				c.AbortWithStatus(http.StatusInternalServerError)
+				log.Printf("User didn't provide a loopback address [%s] as the callback uri", callbackURI)
+				c.HTML(http.StatusOK, "index.tmpl", gin.H{
+					"roles_json": gin.H{"error": "You must provide a loopback address as the callback uri..."},
+				})
 				return
 			}
 

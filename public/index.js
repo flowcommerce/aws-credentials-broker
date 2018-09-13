@@ -2,36 +2,32 @@ import React from 'react';
 import ReactDOM from "react-dom";
 import { map } from 'lodash';
 
+import {
+  Error,
+  RoleRow,
+  RoleAssumed,
+  AccountRoleGroup,
+  RoleSelectionForm
+} from './components';
+
 class App extends React.Component {
   render() {
     const accountsMap = JSON.parse(document.getElementById("roles").textContent);
 
     let content;
     if(accountsMap.success) {
-      content = <div style={{ textAlign: 'center', width: '100%' }}>Successfully assumed role! You can close this window now.</div>
+      content = <RoleAssumed />
+    } else if(accountsMap.error) {
+      content = <Error message={accountsMap.error} />
     } else {
-      const accounts = map(Object.keys(accountsMap), account => (
-        <div className="account flex-item">
-          <h2>Account: {account}</h2>
-          <hr />
-          <div className="flex-container">
-            {map(accountsMap[account], ({ arn, name }) => (
-              <div className="role flex-item">
-                <input type="radio" name="role" value={arn} /> {name}
-              </div>
-            ))}
-          </div>
-        </div>
-      ));
-
       content = (
-        <form method="POST" action="/login">
-          <h2>Select a role:</h2>
-          <div className="flex-container">{accounts}</div>
-          <div className="flex-container">
-            <button className="flex-item signIn" type="submit">Sign In</button>
-          </div>
-        </form>
+        <RoleSelectionForm>
+          {map(Object.keys(accountsMap), account => (
+            <AccountRoleGroup account={account}>
+              {map(accountsMap[account], (props) => (<RoleRow {...props} />))}
+            </AccountRoleGroup>
+          ))}
+        </RoleSelectionForm>
       );
     }
 
