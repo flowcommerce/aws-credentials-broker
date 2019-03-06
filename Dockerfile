@@ -11,7 +11,7 @@ COPY . /go/src/github.com/flowcommerce/aws-credentials-broker
 RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && make release-binary VERSION=${VERSION}
 
 # Build the React frontend
-FROM node:10-alpine AS fe-builder
+FROM node:lts-alpine AS fe-builder
 
 COPY public /go/src/github.com/flowcommerce/aws-credentials-broker/public
 COPY .babelrc /go/src/github.com/flowcommerce/aws-credentials-broker/.babelrc
