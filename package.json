@@ -12,14 +12,15 @@
     "build": "node_modules/.bin/parcel build public/index.html --out-dir templates --out-file index.tmpl --public-url ./dist/"
   },
   "dependencies": {
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.11",
     "react": "^16.4.2",
     "react-dom": "^16.4.2"
   },
   "devDependencies": {
+    "babel-core": "^6.26.3",
     "babel-preset-env": "^1.7.0",
     "babel-preset-react": "^6.24.1",
-    "parcel-bundler": "^1.9.7"
+    "parcel-bundler": "^1.11.0"
   }
 }
 

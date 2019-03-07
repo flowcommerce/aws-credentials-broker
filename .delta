@@ -1,6 +1,0 @@
-builds:
-  - root:
-      instance.type: t3.micro
-      port.container: 8234
-      port.host: 8234
-      version: 1.3

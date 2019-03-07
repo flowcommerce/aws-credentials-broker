@@ -1,0 +1,36 @@
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  port: 8234
+
+image:
+  repository: flowcommerce/aws-credentials-broker
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    memory: "50Mi"
+    cpu: .05
+
+nodeSelector: {}
+affinity: {}
+tolerations: {}
+
+ingress:
+  enabled: true
+
+services:
+  live:
+    stages:
+      - deployment: live
+        weight: 100
+
+deployments:
+  live:
+    minReplicas: 2
+    maxReplicas: 2
+    maxUnavailable: 1
+    disruptionBudgetEnabled: true
+    targetCPUUtilizationPercentage: 80
+    version: master-1

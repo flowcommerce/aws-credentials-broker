@@ -10,7 +10,7 @@
   version = "v0.26.0"
 
 [[projects]]
-  digest = "1:55c1331fb71f26dc210bf3722ff3d2af61e6bfd5ec8cbac887a5da373c067b1b"
+  digest = "1:f7d87534782813b925f7297f89e598e0b6d4eeec97f81aadf8ab09e755d9db6e"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -22,6 +22,7 @@
     "aws/credentials",
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
+    "aws/credentials/processcreds",
     "aws/credentials/stscreds",
     "aws/csm",
     "aws/defaults",
@@ -30,6 +31,7 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/ini",
     "internal/sdkio",
     "internal/sdkrand",
     "internal/sdkuri",
@@ -42,8 +44,8 @@
     "service/sts",
   ]
   pruneopts = "UT"
-  revision = "04abd557eeaab3cfdded45467eea00fc03db9cb9"
-  version = "v1.15.26"
+  revision = "754d07f5dfb0a42be29df8da4a5428a321377cb3"
+  version = "v1.17.11"
 
 [[projects]]
   digest = "1:2b59aca2665ff804f6606c8829eaee133ddd3aefbc841014660d961b0034f888"
@@ -52,6 +54,14 @@
   pruneopts = "UT"
   revision = "cf4846e6a636a76237a28d9286f163c132e841bc"
   version = "v1.2"
+
+[[projects]]
+  digest = "1:fd66f3d5f4398879b0051e46e8421abdc93b5a6a64b645dc80986157fb99308d"
+  name = "github.com/gin-contrib/pprof"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cea200e02ddddca4b843d75d32aa13c413549de9"
+  version = "v1.1"
 
 [[projects]]
   branch = "master"
@@ -102,14 +112,6 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:5abd6a22805b1919f6a6bca0ae58b13cef1f3412812f38569978f43ef02743d4"
-  name = "github.com/go-ini/ini"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5cf292cae48347c2490ac1a58fe36735fb78df7e"
-  version = "v1.38.2"
-
-[[projects]]
   digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
@@ -142,11 +144,11 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:e22af8c7518e1eab6f2eab2b7d7558927f816262586cd6ed9f349c97a6c285c4"
+  digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   pruneopts = "UT"
-  revision = "0b12d6b5"
+  revision = "c2b33e84"
 
 [[projects]]
   digest = "1:3e551bbb3a7c0ab2a2bf4660e7fcad16db089fdcfbb44b0199e62838038623ea"
@@ -223,14 +225,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:81780052bc5f881f4d511e0f4be0d2d303f8f2e05e755e78d512ffb1ffe6cfff"
+  digest = "1:98f1f178a11bc25feb91f9127a9c22672a2c9f800a00702e1a980015bfcb6b83"
   name = "google.golang.org/api"
   packages = [
     "admin/directory/v1",
     "gensupport",
     "googleapi",
     "googleapi/internal/uritemplates",
-    "googleapi/transport",
   ]
   pruneopts = "UT"
   revision = "b810576d88a056b90ef18a0b5328544c9c074c68"
@@ -278,6 +279,7 @@
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/sts",
     "github.com/gin-contrib/cors",
+    "github.com/gin-contrib/pprof",
     "github.com/gin-contrib/secure",
     "github.com/gin-contrib/sessions",
     "github.com/gin-contrib/sessions/cookie",
@@ -285,8 +287,8 @@
     "github.com/gin-gonic/gin",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/google",
+    "golang.org/x/oauth2/jwt",
     "google.golang.org/api/admin/directory/v1",
-    "google.golang.org/api/googleapi/transport",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

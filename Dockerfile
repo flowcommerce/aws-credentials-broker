@@ -21,7 +21,7 @@ COPY templates/img /go/src/github.com/flowcommerce/aws-credentials-broker/templa
 RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && npm install && npm run build
 
 # Put it all together for a runtime app
-FROM flowdocker/play:0.1.3
+FROM golang:1.11
 
 WORKDIR /usr/local/bin
 
@@ -30,4 +30,4 @@ COPY --from=fe-builder /go/src/github.com/flowcommerce/aws-credentials-broker/te
 
 EXPOSE 8234
 
-ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "aws-credentials-broker", "/usr/local/bin/aws-credentials-broker"]
+ENTRYPOINT ["/usr/local/bin/aws-credentials-broker"]

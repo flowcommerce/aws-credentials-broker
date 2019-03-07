@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/flowcommerce/aws-credentials-broker/utils"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-contrib/secure"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -273,6 +274,11 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	pprof.Register(r, nil)
+
+	r.GET("/_internal_/healthcheck", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
 
 	store := cookie.NewStore(utils.RandToken(64), utils.RandToken(32))
 	r.Use(sessions.Sessions("aws-broker", store))
@@ -299,9 +305,6 @@ func main() {
 	r.GET("/roles", listRoles(conf, r, adminConf))
 	r.POST("/login", login(conf, adminConf))
 	r.GET("/success", success)
-	r.GET("/_internal_/healthcheck", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
 	r.GET("/", func(c *gin.Context) {
 		sesh := sessions.Default(c)
 		tok := sesh.Get(sessionKey)
