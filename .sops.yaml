@@ -1,3 +1,3 @@
 creation_rules:
-  - kms: 'arn:aws:kms:us-east-1:479720515435:key/8e8ad995-988f-4482-bb46-895b6c95a2f8+arn:aws:iam::479720515435:role/DeveloperAdmin'
-  - kms: 'arn:aws:kms:us-east-1:479720515435:key/8e8ad995-988f-4482-bb46-895b6c95a2f8+arn:aws:iam::479720515435:role/ecsInstanceRole'
+
+  - kms: 'arn:aws:kms:us-east-1:479720515435:key/8e8ad995-988f-4482-bb46-895b6c95a2f8+arn:aws:iam::479720515435:role/cicd20181011095611663000000001'

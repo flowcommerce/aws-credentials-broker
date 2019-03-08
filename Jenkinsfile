@@ -13,7 +13,7 @@ pipeline {
       inheritFrom 'default'
 
       containerTemplates([
-        containerTemplate(name: 'helm', image: "lachlanevenson/k8s-helm:v2.12.0", command: 'cat', ttyEnabled: true),
+        containerTemplate(name: 'helm', image: "grahamar/k8s-helm-secrets:v2.13.0", command: 'cat', ttyEnabled: true),
         containerTemplate(name: 'docker', image: 'docker', command: 'cat', ttyEnabled: true)
       ])
     }
@@ -41,8 +41,8 @@ pipeline {
           script {
 
             docker.withRegistry('', 'docker-hub-credentials') {
-              aws-credentials-broker = docker.build("$ORG/aws-credentials-broker:$APP_TAG", '-f Dockerfile .')
-              aws-credentials-broker.push()
+              image = docker.build("$ORG/aws-credentials-broker:$APP_TAG", '-f Dockerfile .')
+              image.push()
             }
 
           }
@@ -56,8 +56,9 @@ pipeline {
         container('helm') {
           sh('helm init --client-only')
           sh('helm plugin install https://github.com/futuresimple/helm-secrets')
-          sh("helm secrets upgrade --wait --install --namespace production --set deployments.live.version=$APP_TAG aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
-
+          withAWS(role: 'arn:aws:iam::479720515435:role/cicd20181011095611663000000001', roleAccount: '479720515435') {
+            sh("helm secrets upgrade --wait --install --namespace production --set deployments.live.version=$APP_TAG aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
+          }
         }
       }
     }
