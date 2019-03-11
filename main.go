@@ -280,7 +280,9 @@ func main() {
 		c.Status(http.StatusOK)
 	})
 
-	store := cookie.NewStore(utils.RandToken(64), utils.RandToken(32))
+	secretKey1 := os.Getenv("COOKIE_SECRET_1")
+	secretKey2 := os.Getenv("COOKIE_SECRET_2")
+	store := cookie.NewStore([]byte(secretKey1), []byte(secretKey2))
 	r.Use(sessions.Sessions("aws-broker", store))
 	r.Use(static.Serve("/dist", static.LocalFile("./templates", false)))
 	r.Use(secure.New(secure.Config{

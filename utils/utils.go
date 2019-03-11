@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"io/ioutil"
+	"os"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -42,6 +43,11 @@ func RandToken(l int) []byte {
 }
 
 func getGoogleAdminUserRoles(usrKey string, config *AdminUserConfig) (*Roles, error) {
+	var customSchemaKey = os.Getenv("CUSTOM_SCHEMA_KEY")
+	if customSchemaKey == "" {
+		customSchemaKey = "AWS_SAML"
+	}
+
 	c := &jwt.Config{
 		Email:      config.Email,
 		PrivateKey: config.PrivateKey,
@@ -56,13 +62,16 @@ func getGoogleAdminUserRoles(usrKey string, config *AdminUserConfig) (*Roles, er
 		return nil, err
 	}
 
-	response, err := srv.Users.Get(usrKey).CustomFieldMask("AWS_SAML").Projection("custom").Do()
+	response, err := srv.Users.Get(usrKey).
+		CustomFieldMask(customSchemaKey).
+		Projection("custom").
+		Do()
 	if err != nil {
 		return nil, err
 	}
 
 	var rls Roles
-	err = json.Unmarshal(response.CustomSchemas["AWS_SAML"], &rls)
+	err = json.Unmarshal(response.CustomSchemas[customSchemaKey], &rls)
 	if err != nil {
 		return nil, err
 	}
