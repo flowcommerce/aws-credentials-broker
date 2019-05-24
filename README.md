@@ -26,6 +26,21 @@ The flow is as follows:
     - Enable API access in Google Admin
     - In Google Admin > Manage API client access. Grant our service account client id the scope `https://www.googleapis.com/auth/admin.directory.user.readonly`
 
+NOTE: By default the custom schema in Google directory should be in the following format
+
+```
+"customSchemas": {
+  "AWS_SAML": {
+    "SessionDuration": "3600",
+    "IAM_role": [
+      {
+        "value": "arn:aws:iam::xxx:role/admin,arn:aws:iam::xxx:saml-provider/gsuite"
+      }
+    ]
+  }
+}
+```
+
 ## AWS Setup
 
 Assuming you already have a SAML provider & roles setup for Google federated users. You need to add a trust relationship for out Google Client ID.
@@ -66,4 +81,3 @@ In our role we want to give to users, we need to edit the trust relationship pol
 | GOOGLE_SA_EMAIL        | The Google Service Account User email                                                                      |
 | GOOGLE_SA_PK           | The Google Service Account User private key, base64 encoded                                                |
 | HOSTED_DOMAIN          | The Google domain to filter users for, ignored if left blank (Optional)                                    |
-
