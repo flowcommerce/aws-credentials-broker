@@ -41,7 +41,7 @@ pipeline {
           script {
 
             docker.withRegistry('', 'docker-hub-credentials') {
-              image = docker.build("$ORG/aws-credentials-broker:$APP_TAG", '-f Dockerfile .')
+              image = docker.build("$ORG/aws-credentials-broker:$APP_TAG", '--network=host -f Dockerfile .')
               image.push()
             }
 
