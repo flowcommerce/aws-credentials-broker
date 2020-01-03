@@ -34,33 +34,56 @@ spec:
           image: "{{ $.Values.image.repository }}:{{ $deployment.version }}"
           imagePullPolicy: {{ $.Values.image.pullPolicy }}
           env:
-            - name: JAVA_OPTS
-              value: "-Xms{{ $.Values.jvmMemory}}m -Xmx{{ $.Values.jvmMemory}}m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt"
-            - name: FLOW_KUBERNETES_NODE_NAME
+            - name: COOKIE_SECRET_1
               valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: FLOW_KUBERNETES_NODE_IP
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: cookie_secret_1
+            - name: COOKIE_SECRET_2
               valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: FLOW_KUBERNETES_POD_NAME
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: cookie_secret_2
+            - name: HOSTED_DOMAIN
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: FLOW_KUBERNETES_POD_NAMESPACE
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: hosted_domain
+            - name: ALLOWED_ORIGIN
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: FLOW_KUBERNETES_POD_IP
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: allowed_origin
+            - name: GOOGLE_CLIENT_REDIRECT
               valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: FLOW_KUBERNETES_POD_UID
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_client_redirect
+            - name: GOOGLE_CLIENT_ID
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.uid
-          args: ["production"]
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_client_id
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_client_secret
+            - name: GOOGLE_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_admin_email
+            - name: GOOGLE_SA_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_sa_email
+            - name: GOOGLE_SA_PK
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_sa_pk
           ports:
             - name: http
               containerPort: {{ $.Values.service.port }}
@@ -69,14 +92,12 @@ spec:
             httpGet:
               path: /_internal_/healthcheck
               port: http
-            initialDelaySeconds: 130
             periodSeconds: 5
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /_internal_/healthcheck
               port: http
-            initialDelaySeconds: 120
             failureThreshold: 10
             periodSeconds: 5
             timeoutSeconds: 5
