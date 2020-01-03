@@ -10,7 +10,6 @@ metadata:
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
     app.kubernetes.io/name: {{ include "deploy.name" $ }}
     app.kubernetes.io/stage: {{ $stage }}
-    flow.io/version: {{ $deployment.version }}
 spec:
   replicas: {{ $deployment.minReplicas }}
   selector:
@@ -24,7 +23,6 @@ spec:
         app.kubernetes.io/name: {{ include "deploy.name" $ }}
         app.kubernetes.io/instance: {{ $.Release.Name }}
         app.kubernetes.io/stage: {{ $stage }}
-        flow.io/version: {{ $deployment.version }}
       annotations:
         iam.amazonaws.com/role: {{ $.Values.iamRole }}
         sumologic.com/sourceCategory: {{ $fullName }}_docker_logs
