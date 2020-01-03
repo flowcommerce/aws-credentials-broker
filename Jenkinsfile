@@ -29,7 +29,16 @@ pipeline {
       steps {
         checkoutWithTags scm
         script {
-          APP_TAG = sh(returnStdout: true, script: 'git describe --tags --dirty --always').trim()
+          VERSION = new flowSemver().calculateSemver()
+        }
+      }
+    }
+
+    stage('Commit SemVer tag') {
+       when { branch 'master' }
+       steps {
+        script {
+          new flowSemver().commitSemver(VERSION)
         }
       }
     }
@@ -39,10 +48,11 @@ pipeline {
       steps {
         container('docker') {
           script {
+            semver = VERSION.printable()
 
-            docker.withRegistry('', 'docker-hub-credentials') {
-              image = docker.build("$ORG/aws-credentials-broker:$APP_TAG", '--network=host -f Dockerfile .')
-              image.push()
+            docker.withRegistry('https://index.docker.io/v1/', 'jenkins-dockerhub') {
+              db = docker.build("$ORG/$APP_NAME:$semver", '--network=host -f Dockerfile .')
+              db.push()
             }
 
           }

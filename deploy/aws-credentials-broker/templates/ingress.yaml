@@ -4,7 +4,7 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: {{ $fullName }}-{{ $gateway.key }}
+  name: {{ $gateway.key }}
   labels:
     app.kubernetes.io/name: {{ include "deploy.name" $ }}
     helm.sh/chart: {{ include "deploy.chart" $ }}
