@@ -19,9 +19,20 @@ tolerations: {}
 
 ingress:
   enabled: true
+  gateways:
+    - key: aws-credentials-broker-flow-io
+      tld: flow.io
+      hosts:
+        - aws-credentials-broker.flow.io
 
 services:
   live:
+    hosts:
+      - aws-credentials-broker
+      - aws-credentials-broker.flow.io
+    gateways:
+      - mesh
+      - aws-credentials-broker-flow-io
     stages:
       - deployment: live
         weight: 100
