@@ -18,7 +18,13 @@ COPY .babelrc /go/src/github.com/flowcommerce/aws-credentials-broker/.babelrc
 COPY package.json /go/src/github.com/flowcommerce/aws-credentials-broker/package.json
 COPY package-lock.json /go/src/github.com/flowcommerce/aws-credentials-broker/package-lock.json
 COPY templates/img /go/src/github.com/flowcommerce/aws-credentials-broker/templates/img
-RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && npm install && npm run build
+RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && \
+  apk add --no-cache --virtual .gyp \
+        python \
+        make \
+        g++ && \ 
+  npm install && \
+  npm run build 
 
 # Put it all together for a runtime app
 FROM golang:1.11
