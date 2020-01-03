@@ -67,7 +67,7 @@ pipeline {
           sh('helm init --client-only')
           sh('helm plugin install https://github.com/futuresimple/helm-secrets || true')
           withAWS(role: 'arn:aws:iam::479720515435:role/cicd20181011095611663000000001', roleAccount: '479720515435') {
-            sh("helm secrets upgrade --wait --install --namespace production --set deployments.live.version=$APP_TAG aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
+            sh("helm secrets upgrade --wait --install --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
           }
         }
       }
