@@ -64,10 +64,13 @@ pipeline {
       when { branch 'master' }
       steps {
         container('helm') {
+          sh(script: """sed -i 's/^appVersion:.*\$/appVersion: "${VERSION.printable()}"/' deploy/aws-credentials-broker*/Chart.yaml""") //XXX: This is the only way to actually set the app version with today's helm
+
           sh('helm init --client-only')
           sh('helm plugin install https://github.com/futuresimple/helm-secrets || true')
+
           withAWS(role: 'arn:aws:iam::479720515435:role/cicd20181011095611663000000001', roleAccount: '479720515435') {
-            sh("helm secrets upgrade --wait --install --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
+            sh("helm secrets upgrade --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
           }
         }
       }
