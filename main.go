@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -197,12 +198,19 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 			return
 		}
 
+		duration, err := strconv.ParseInt(user.Roles.SessionDuration, 10, 64)
+		if err != nil {
+			log.Panicf("User cannot assume role %v", requestedRoleArn)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
 		sess := session.Must(session.NewSession())
 		stsService := sts.New(sess)
 		resp, err := stsService.AssumeRoleWithWebIdentity(&sts.AssumeRoleWithWebIdentityInput{
 			RoleArn:          aws.String(roleArn),
 			RoleSessionName:  aws.String(user.User.Email),
-			DurationSeconds:  aws.Int64(user.Roles.SessionDuration),
+			DurationSeconds:  aws.Int64(duration),
 			WebIdentityToken: aws.String(idToken.(string)),
 		})
 		if err != nil {
