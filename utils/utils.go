@@ -21,7 +21,7 @@ type RoleValue struct {
 }
 
 type Roles struct {
-	SessionDuration string      `json:"SessionDuration"`
+	SessionDuration int64       `json:"SessionDuration"`
 	Roles           []RoleValue `json:"IAM_role"`
 }
 
