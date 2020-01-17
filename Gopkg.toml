@@ -11,5 +11,5 @@
   name = "google.golang.org/api"
 
 [[constraint]]
-  version = "v1.17.11"
+  version = "v1.28.4"
   name = "github.com/aws/aws-sdk-go"
