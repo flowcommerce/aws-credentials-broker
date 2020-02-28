@@ -1,0 +1,41 @@
+---
+kind: pipeline
+type: docker
+name: aws-credentials-broker
+
+workspace:
+  base: /go
+  path: src/github.com/flowcommerce/aws-credentials-broker
+
+steps:
+- name: docker build
+  image: quay.io/clearai/ci-toolset:latest
+  volumes:
+    - name: docker
+      path: /var/run/docker.sock
+  environment:
+    DOCKERCONFIG:
+      from_secret: dockerconfig
+  commands:
+    - make docker-build
+
+- name: docker push
+  image: quay.io/clearai/ci-toolset:latest
+  volumes:
+    - name: docker
+      path: /var/run/docker.sock
+  environment:
+    DOCKERCONFIG:
+      from_secret: dockerconfig
+  commands:
+    - mkdir -p ~/.docker; echo "$DOCKERCONFIG" > ~/.docker/config.json
+    - docker tag quay.io/clearai/aws-credentials-broker:${DRONE_COMMIT:0:7} quay.io/clearai/aws-credentials-broker:master
+    - docker push quay.io/clearai/aws-credentials-broker:${DRONE_COMMIT:0:7}
+    - docker push quay.io/clearai/aws-credentials-broker:master
+  when:
+    branch: master
+
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
