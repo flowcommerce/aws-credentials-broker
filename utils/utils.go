@@ -14,9 +14,7 @@ import (
 )
 
 
-// type Foo struct {
-//   Value     FlexInt
-// }
+// FlexInt is from: https://engineering.bitnami.com/articles/dealing-with-json-with-non-homogeneous-types-in-go.html
 
 // A FlexInt is an int that can be unmarshalled from a JSON field
 // that has either a number or a string value.

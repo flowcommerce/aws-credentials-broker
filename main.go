@@ -204,7 +204,7 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 		resp, err := stsService.AssumeRoleWithWebIdentity(&sts.AssumeRoleWithWebIdentityInput{
 			RoleArn:          aws.String(roleArn),
 			RoleSessionName:  aws.String(user.User.Email),
-			DurationSeconds:  aws.Int64(duration),
+			DurationSeconds:  aws.Int64(int64(duration)),
 			WebIdentityToken: aws.String(idToken.(string)),
 		})
 		if err != nil {
