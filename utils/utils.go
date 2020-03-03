@@ -5,12 +5,42 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	admin "google.golang.org/api/admin/directory/v1"
 )
+
+
+// FlexInt is from: https://engineering.bitnami.com/articles/dealing-with-json-with-non-homogeneous-types-in-go.html
+
+// A FlexInt is an int that can be unmarshalled from a JSON field
+// that has either a number or a string value.
+// E.g. if the json field contains an string "42", the
+// FlexInt value will be "42".
+type FlexInt int
+
+// UnmarshalJSON implements the json.Unmarshaler interface, which
+// allows us to ingest values of any json type as an int and run our custom conversion
+
+func (fi *FlexInt) UnmarshalJSON(b []byte) error {
+   if b[0] != '"' {
+          return json.Unmarshal(b, (*int)(fi))
+   }
+   var s string
+   if err := json.Unmarshal(b, &s); err != nil {
+          return err
+   }
+   i, err := strconv.Atoi(s)
+   if err != nil {
+          return err
+    }
+    *fi = FlexInt(i)
+    return nil
+}
+
 
 type User struct {
 	Email string `json:"email"`
@@ -21,7 +51,7 @@ type RoleValue struct {
 }
 
 type Roles struct {
-	SessionDuration int64       `json:"SessionDuration"`
+	SessionDuration FlexInt     `json:"SessionDuration"`
 	Roles           []RoleValue `json:"IAM_role"`
 }
 
