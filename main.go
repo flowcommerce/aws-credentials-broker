@@ -198,12 +198,6 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 		}
 
 		duration := user.Roles.SessionDuration
-// 		duration, err := strconv.ParseInt(user.Roles.SessionDuration, 10, 64)
-// 		if err != nil {
-// 			log.Panicf("User cannot assume role %v", requestedRoleArn)
-// 			c.AbortWithStatus(http.StatusForbidden)
-// 			return
-// 		}
 
 		sess := session.Must(session.NewSession())
 		stsService := sts.New(sess)
