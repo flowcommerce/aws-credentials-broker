@@ -14,7 +14,7 @@ pipeline {
 
       containerTemplates([
         containerTemplate(name: 'helm', image: "grahamar/k8s-helm-secrets:v2.13.0", command: 'cat', ttyEnabled: true),
-        containerTemplate(name: 'docker', image: 'docker', command: 'cat', ttyEnabled: true)
+        containerTemplate(name: 'docker', image: 'docker:18', command: 'cat', ttyEnabled: true)
       ])
     }
   }
