@@ -1,6 +1,6 @@
 # aws-credentials-broker
 
-[![Build Status](https://travis-ci.com/flowcommerce/aws-credentials-broker.svg?token=ehYmhiZsnqWFWAoybfVc&branch=master)](https://travis-ci.com/flowcommerce/aws-credentials-broker)
+[![Build Status](https://travis-ci.com/flowcommerce/aws-credentials-broker.svg?token=ehYmhiZsnqWFWAoybfVc&branch=main)](https://travis-ci.com/flowcommerce/aws-credentials-broker)
 
 AWS Credentials Broker - Grants temporary AWS credentials for Google federated users
 
