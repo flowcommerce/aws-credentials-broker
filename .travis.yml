@@ -10,10 +10,10 @@ git:
 install: true
 
 before_script:
-  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  - curl https://raw.githubusercontent.com/golang/dep/main/install.sh | sh
 script:
   - dep ensure
   - go test -v ./...
 branches:
   only:
-    - master
+    - main
