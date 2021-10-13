@@ -9,7 +9,9 @@ metadata:
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
     app.kubernetes.io/name: {{ include "deploy.name" $ }}
+    app: {{ include "deploy.name" $ }}
     app.kubernetes.io/stage: {{ $stage }}
+    flow.io/version: {{ $deployment.version }}
 spec:
   replicas: {{ $deployment.minReplicas }}
   selector:
@@ -23,8 +25,12 @@ spec:
         app.kubernetes.io/name: {{ include "deploy.name" $ }}
         app.kubernetes.io/instance: {{ $.Release.Name }}
         app.kubernetes.io/stage: {{ $stage }}
+        app: {{ include "deploy.name" $ }}
+        flow.io/version: {{ $deployment.version }}
       annotations:
+        {{- if not $deployment.serviceAccountName }}
         iam.amazonaws.com/role: {{ $.Values.iamRole }}
+        {{- end }}
         sumologic.com/sourceCategory: {{ $fullName }}
     spec:
       containers:
@@ -82,21 +88,66 @@ spec:
                 secretKeyRef:
                   name: aws-credentials-broker
                   key: google_sa_pk
+            - name: FLOW_KUBERNETES_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: FLOW_KUBERNETES_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: FLOW_KUBERNETES_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: FLOW_KUBERNETES_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: FLOW_KUBERNETES_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: FLOW_KUBERNETES_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: {{ $.Chart.Name }}
+            - name: DD_ENV
+              value: {{ $stage }}
+            - name: DD_VERSION
+              value: {{ $deployment.version }}
+            - name: DD_JMXFETCH_STATSD_HOST
+              value: 'unix:///var/run/datadog/dsd.socket'
+            - name: DD_SERVICE_MAPPING
+              value: postgresql:{{ $.Chart.Name }}-postgresql,java-aws-sdk:{{ $.Chart.Name }}-aws-sdk"
+          args: ["production"]
           ports:
             - name: http
               containerPort: {{ $.Values.service.port }}
               protocol: TCP
+          volumeMounts:
+            - name: dsdsocket
+              mountPath: /var/run/datadog
           livenessProbe:
             httpGet:
               path: /_internal_/healthcheck
               port: http
-            periodSeconds: 5
+            initialDelaySeconds: 130
+            failureThreshold: 6
+            periodSeconds: 10
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /_internal_/healthcheck
               port: http
-            failureThreshold: 10
+            initialDelaySeconds: 120
+            failureThreshold: 3
             periodSeconds: 5
             timeoutSeconds: 5
           resources:
@@ -115,5 +166,15 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
+      volumes:
+        - name: dsdsocket
+          hostPath:
+            path: /var/run/datadog/
+            type: DirectoryOrCreate
+      {{- if $deployment.serviceAccountName }}
+      serviceAccountName: {{ $deployment.serviceAccountName }}
+      {{- end }}
+  strategy:
+    type: {{ $deployment.strategy | default "RollingUpdate" }}
 ---
 {{- end -}}
