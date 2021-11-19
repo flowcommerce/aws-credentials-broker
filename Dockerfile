@@ -20,7 +20,7 @@ COPY package-lock.json /go/src/github.com/flowcommerce/aws-credentials-broker/pa
 COPY templates/img /go/src/github.com/flowcommerce/aws-credentials-broker/templates/img
 RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && \
   apk add --no-cache --virtual .gyp \
-        python \
+        python3 \
         make \
         g++ && \ 
   npm install && \
