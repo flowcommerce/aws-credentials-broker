@@ -4,15 +4,17 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: {{ $fullName }}-{{ $gateway.key }}
+  name: {{ $gateway.key }}
   labels:
     app.kubernetes.io/name: {{ include "deploy.name" $ }}
     helm.sh/chart: {{ include "deploy.chart" $ }}
     app.kubernetes.io/instance: {{ $.Release.Name }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    app: {{ include "deploy.name" $ }}
   annotations:
     kubernetes.io/ingress.class: "ingressgateway"
     kubernetes.io/ingress.tld: {{ $gateway.tld | quote }}
+    external-dns.alpha.kubernetes.io/ttl: "120"
 spec:
   selector:
     istio: ingressgateway
