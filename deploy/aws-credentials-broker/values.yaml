@@ -6,6 +6,8 @@ team: "foundation"
 service:
   port: 8234
 
+iamRole: arn:aws:iam::479720515435:role/ecsInstanceRole
+
 image:
   repository: flowcommerce/aws-credentials-broker
 
