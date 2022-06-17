@@ -70,7 +70,7 @@ pipeline {
           }
           sh("helm dep build deploy/aws-credentials-broker/")
           sh("tar -zxvf deploy/aws-credentials-broker/charts/* -C deploy/aws-credentials-broker/charts/ && rm -rf deploy/aws-credentials-broker/charts/*.tgz" )
-          sh(script: """sed -i 's/^appVersion:.*\$/appVersion: "$version"/' deploy/aws-credentials-broker/charts/*/Chart.yaml""") //XXX: This is the only way to actually set the app version with today's helm
+          sh(script: """sed -i 's/^appVersion:.*\$/appVersion: "${VERSION.printable()}"/' deploy/aws-credentials-broker/charts/*/Chart.yaml""") //XXX: This is the only way to actually set the app version with today's helm
           sh("helm secrets upgrade --dry-run --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml --values deploy/aws-credentials-broker/values.yaml ./deploy/aws-credentials-broker/charts/*")
           sh("helm secrets upgrade --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml --values deploy/aws-credentials-broker/values.yaml ./deploy/aws-credentials-broker/charts/*")
         }
