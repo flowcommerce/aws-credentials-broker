@@ -64,8 +64,6 @@ pipeline {
       when { branch 'main' }
       steps {
         container('helm') {
-          sh(script: """sed -i 's/^appVersion:.*\$/appVersion: "${VERSION.printable()}"/' deploy/aws-credentials-broker/Chart.yaml""") //XXX: This is the only way to actually set the app version with today's helm
-
           sh('helm init --client-only')
           withCredentials([usernamePassword(credentialsId: 'jenkins-x-jfrog', passwordVariable: 'JFROG_PASSWORD', usernameVariable: 'JFROG_USERNAME')]) {
             sh('helm repo add generic-charts-helm https://flow.jfrog.io/artifactory/api/helm/generic-charts-helm --username ${JFROG_USERNAME} --password ${JFROG_PASSWORD}')
@@ -73,9 +71,9 @@ pipeline {
           sh("helm dep build deploy/aws-credentials-broker/")
           sh("tar -zxvf deploy/aws-credentials-broker/charts/* -C deploy/aws-credentials-broker/charts/ && rm -rf deploy/aws-credentials-broker/charts/*.tgz" )
           sh('helm plugin install https://github.com/futuresimple/helm-secrets || true')
-
-          sh("helm secrets upgrade --dry-run --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
-          sh("helm secrets upgrade --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
+          sh(script: """sed -i 's/^appVersion:.*\$/appVersion: "$version"/' deploy/aws-credentials-broker/charts/*/Chart.yaml""") //XXX: This is the only way to actually set the app version with today's helm
+          sh("helm secrets upgrade --dry-run --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml --values deploy/aws-credentials-broker/values.yaml ./deploy/aws-credentials-broker/charts/*")
+          sh("helm secrets upgrade --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml --values deploy/aws-credentials-broker/values.yaml ./deploy/aws-credentials-broker/charts/*")
         }
       }
     }
