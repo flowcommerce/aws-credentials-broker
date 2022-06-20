@@ -1,0 +1,196 @@
+{{- $fullName := include "deploy.fullname" . -}}
+{{- range $stage, $deployment := index .Values "deployments" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-{{ $stage }}
+  labels:
+    helm.sh/chart: {{ include "deploy.chart" $ }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    app.kubernetes.io/name: {{ include "deploy.name" $ }}
+    app: {{ include "deploy.name" $ }}
+    app.kubernetes.io/stage: {{ $stage }}
+    flow.io/version: {{ $deployment.version }}
+spec:
+  replicas: {{ $deployment.minReplicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "deploy.name" $ }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/stage: {{ $stage }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "deploy.name" $ }}
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+        app.kubernetes.io/stage: {{ $stage }}
+        app: {{ include "deploy.name" $ }}
+        flow.io/version: {{ $deployment.version }}
+      annotations:
+        {{- if not $deployment.serviceAccountName }}
+        iam.amazonaws.com/role: {{ $.Values.iamRole }}
+        {{- end }}
+        sumologic.com/sourceCategory: {{ $fullName }}
+    spec:
+      containers:
+        - name: {{ $.Chart.Name }}
+          image: "{{ $.Values.image.repository }}:{{ $deployment.version }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          env:
+            - name: COOKIE_SECRET_1
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: cookie_secret_1
+            - name: COOKIE_SECRET_2
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: cookie_secret_2
+            - name: HOSTED_DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: hosted_domain
+            - name: ALLOWED_ORIGIN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: allowed_origin
+            - name: GOOGLE_CLIENT_REDIRECT
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_client_redirect
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_client_id
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_client_secret
+            - name: GOOGLE_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_admin_email
+            - name: GOOGLE_SA_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_sa_email
+            - name: GOOGLE_SA_PK
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials-broker
+                  key: google_sa_pk
+            - name: FLOW_KUBERNETES_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: FLOW_KUBERNETES_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: FLOW_KUBERNETES_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: FLOW_KUBERNETES_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: FLOW_KUBERNETES_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: FLOW_KUBERNETES_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: {{ $.Chart.Name }}
+            - name: DD_ENV
+              value: {{ $stage }}
+            - name: DD_VERSION
+              value: {{ $deployment.version }}
+            - name: DD_JMXFETCH_STATSD_HOST
+              value: 'unix:///var/run/datadog/dsd.socket'
+            - name: DD_SERVICE_MAPPING
+              value: postgresql:{{ $.Chart.Name }}-postgresql,java-aws-sdk:{{ $.Chart.Name }}-aws-sdk"
+          args: ["production"]
+          ports:
+            - name: http
+              containerPort: {{ $.Values.service.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: dsdsocket
+              mountPath: /var/run/datadog
+          startupProbe:
+            httpGet:
+              path: /_internal_/healthcheck
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_internal_/healthcheck
+              port: http
+            failureThreshold: 6
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /_internal_/healthcheck
+              port: http
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+{{ toYaml $.Values.resources | indent 12 }}
+    {{- with $.Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      imagePullSecrets:
+        - name: flow-docker-hub
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ include "deploy.name" $ }}
+              topologyKey: topology.kubernetes.io/zone
+    {{- with $.Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      volumes:
+        - name: dsdsocket
+          hostPath:
+            path: /var/run/datadog/
+            type: DirectoryOrCreate
+      {{- if $deployment.serviceAccountName }}
+      serviceAccountName: {{ $deployment.serviceAccountName }}
+      {{- end }}
+  strategy:
+    type: {{ $deployment.strategy | default "RollingUpdate" }}
+---
+{{- end -}}
