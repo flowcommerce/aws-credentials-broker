@@ -16,7 +16,7 @@ metadata:
     external-dns.alpha.kubernetes.io/ttl: "120"
 spec:
   selector:
-    istio: ingressgateway
+    istio: ingressgateway-flow-io
   servers:
     - port:
         number: 80
