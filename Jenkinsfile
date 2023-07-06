@@ -10,10 +10,11 @@ pipeline {
   agent {
     kubernetes {
       label 'worker-aws-credentials-broker'
-      inheritFrom 'kaniko-slim'
+      inheritFrom 'default'
 
       containerTemplates([
-        containerTemplate(name: 'helm', image: "flowcommerce/k8s-build-helm2:0.0.48", command: 'cat', ttyEnabled: true)
+        containerTemplate(name: 'helm', image: "flowcommerce/k8s-build-helm2:0.0.48", command: 'cat', ttyEnabled: true),
+        containerTemplate(name: 'docker', image: 'docker:18', command: 'cat', ttyEnabled: true)
       ])
     }
   }
@@ -45,15 +46,14 @@ pipeline {
     stage('Build and push docker image release') {
       when { branch 'main' }
       steps {
-        container('kaniko') {
+        container('docker') {
           script {
             semver = VERSION.printable()
 
-            sh """
-              /kaniko/executor -f `pwd`/Dockerfile -c `pwd` \
-              --snapshot-mode=redo --use-new-run  \
-              --destination ${env.ORG}/aws-credentials-broker:$semver
-            """
+            docker.withRegistry('https://index.docker.io/v1/', 'jenkins-dockerhub') {
+              db = docker.build("$ORG/$APP_NAME:$semver", '--network=host -f Dockerfile .')
+              db.push()
+            }
 
           }
         }
