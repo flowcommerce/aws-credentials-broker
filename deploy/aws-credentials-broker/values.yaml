@@ -9,12 +9,22 @@ image:
   pullPolicy: IfNotPresent
 
 resources:
+  limits:
+    memory: "256Mi"
   requests:
-    memory: "50Mi"
+    memory: "256Mi"
     cpu: .05
 
-nodeSelector: {}
-tolerations: {}
+nodeSelector:
+  karpenter/role: workers
+  kubernetes.io/arch: amd64
+tolerations:
+  - key: "role"
+    operator: "Equal"
+    value: "workers"
+    effect: "NoSchedule"
+topologySpreadConstraints:
+  schedule: "DoNotSchedule"
 
 ingress:
   enabled: true
