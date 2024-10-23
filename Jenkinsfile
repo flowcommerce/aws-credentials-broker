@@ -13,7 +13,7 @@ pipeline {
       inheritFrom 'kaniko-slim'
 
       containerTemplates([
-        containerTemplate(name: 'helm', image: "flowcommerce/k8s-build-helm2:0.0.48", command: 'cat', ttyEnabled: true)
+        containerTemplate(name: 'helm', image: "flowcommerce/k8s-build-helm2:0.0.48", command: 'tail', args: '-f /dev/null', ttyEnabled: true)
       ])
     }
   }
