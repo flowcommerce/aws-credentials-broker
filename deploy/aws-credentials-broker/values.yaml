@@ -43,3 +43,5 @@ deployments:
     disruptionBudgetEnabled: true
     targetCPUUtilizationPercentage: 80
     version: master-1
+    serviceAccountName: "flow-prod-eks-production-aws-credentials-broker-sa"
+    serviceAccountIamRole: "arn:aws:iam::479720515435:role/flow-prod-eks-production-role"

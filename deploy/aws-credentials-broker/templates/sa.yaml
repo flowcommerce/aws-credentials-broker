@@ -1,0 +1,12 @@
+{{- range $stage, $deployment := index .Values "deployments" }}
+{{- if $deployment.serviceAccountName }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: {{ $deployment.serviceAccountIamRole }}
+  name: {{ $deployment.serviceAccountName }}
+
+---
+{{- end }}
+{{- end }}
