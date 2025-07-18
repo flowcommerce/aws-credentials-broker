@@ -268,7 +268,7 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
-	pprof.Register(r, nil)
+	pprof.Register(r)
 
 	r.GET("/_internal_/healthcheck", func(c *gin.Context) {
 		c.Status(http.StatusOK)

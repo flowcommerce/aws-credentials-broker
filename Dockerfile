@@ -1,25 +1,20 @@
 # Build the Go App
-FROM golang:1.11 AS go-builder
+FROM golang:1.24 AS go-builder
 
-RUN apt-get update && \
-  apt-get install git && \
-  go get -u github.com/golang/dep/cmd/dep
-
-ARG VERSION
-
-COPY . /go/src/github.com/flowcommerce/aws-credentials-broker
-RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && make release-binary VERSION=${VERSION}
+COPY . /usr/src/aws-credentials-broker
+WORKDIR /usr/src/aws-credentials-broker
+RUN GOBIN=/usr/bin go install -v
 
 # Build the React frontend
 FROM node:lts-alpine AS fe-builder
 
-COPY public /go/src/github.com/flowcommerce/aws-credentials-broker/public
-COPY .babelrc /go/src/github.com/flowcommerce/aws-credentials-broker/.babelrc
-COPY package.json /go/src/github.com/flowcommerce/aws-credentials-broker/package.json
-COPY package-lock.json /go/src/github.com/flowcommerce/aws-credentials-broker/package-lock.json
-COPY templates/img /go/src/github.com/flowcommerce/aws-credentials-broker/templates/img
-RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && \
-  apk add --no-cache --virtual .gyp \
+COPY public /usr/src/aws-credentials-broker/public
+COPY .babelrc /usr/src/aws-credentials-broker/.babelrc
+COPY package.json /usr/src/aws-credentials-broker/package.json
+COPY package-lock.json /usr/src/aws-credentials-broker/package-lock.json
+COPY templates/img /usr/src/aws-credentials-broker/templates/img
+WORKDIR /usr/src/aws-credentials-broker
+RUN apk add --no-cache --virtual .gyp \
         python3 \
         make \
         g++ && \ 
@@ -27,13 +22,13 @@ RUN cd /go/src/github.com/flowcommerce/aws-credentials-broker && \
   npm run build 
 
 # Put it all together for a runtime app
-FROM golang:1.11
+# The binary is at /usr/bin/aws-credentials-broker and the runtime data is at /var, per FHS.
+FROM golang:1.24
 
-WORKDIR /usr/local/bin
-
-COPY --from=go-builder /go/bin/aws-credentials-broker /usr/local/bin/aws-credentials-broker
-COPY --from=fe-builder /go/src/github.com/flowcommerce/aws-credentials-broker/templates /usr/local/bin/templates
+COPY --from=go-builder /usr/bin/aws-credentials-broker /usr/bin/aws-credentials-broker
+COPY --from=fe-builder /usr/src/aws-credentials-broker/templates /var/lib/aws-credentials-broker/templates
 
 EXPOSE 8234
 
-ENTRYPOINT ["/usr/local/bin/aws-credentials-broker"]
+WORKDIR /var/lib/aws-credentials-broker
+ENTRYPOINT ["/usr/bin/aws-credentials-broker"]
