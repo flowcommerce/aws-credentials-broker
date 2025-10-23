@@ -28,12 +28,23 @@ topologySpreadConstraints:
 
 ingress:
   enabled: true
+  gateways:
+    - key: flow-io
+      tld: flow.io
+      hosts:
+        - aws-credentials-broker.flow.io
 
 services:
   live:
     stages:
       - deployment: live
         weight: 100
+    hosts:
+      - aws-credentials-broker
+      - aws-credentials-broker.flow.io
+    gateways:
+      - mesh
+      - aws-credentials-broker-flow-io
 
 deployments:
   live:
