@@ -34,7 +34,8 @@ podTemplate(
       String jsondata = '''
       [{"serviceName": "aws-credentials-broker",
       "dockerImageName": "aws-credentials-broker",
-      "dockerFilePath" : "/Dockerfile"}]
+      "dockerFilePath" : "/Dockerfile",
+      "multiplatforms": "no"}]
       '''
       withCredentials([string(credentialsId: "jenkins-argocd-token", variable: 'ARGOCD_AUTH_TOKEN')]) {
         mainJenkinsBuildArgo(
