@@ -1,78 +1,68 @@
-properties([pipelineTriggers([githubPush()])])
+@Library('lib-jenkins-pipeline') _
 
-pipeline {
-  options {
-    disableConcurrentBuilds()
-    buildDiscarder(logRotator(numToKeepStr: '10'))
-    timeout(time: 30, unit: 'MINUTES')
-  }
 
-  agent {
-    kubernetes {
-      label 'worker-aws-credentials-broker'
-      inheritFrom 'kaniko-slim'
+//  => Mandatory to use a definition before the node or Blue Ocean doesn't show the expected info
+def newTagEveryRunMainBranch = "yes" // Force a new version and deploy clicking on Build Now in Jenkins
+def sbtOnMain = "no"
 
-      containerTemplates([
-        containerTemplate(name: 'helm', image: "flowcommerce/k8s-build-helm2:0.0.48", command: 'tail', args: '-f /dev/null', ttyEnabled: true)
-      ])
-    }
-  }
-
-  environment {
-    ORG      = 'flowcommerce'
-    APP_NAME = 'aws-credentials-broker'
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkoutWithTags scm
-        script {
-          VERSION = new flowSemver().calculateSemver()
-        }
+// we can remove the pod_template block if we end up having only one template
+// in jenkins config
+//
+String podLabel = "Jenkinsfile-aws-credentials-broker"
+podTemplate(
+  label: "${podLabel}",
+  inheritFrom : 'generic'
+){
+  node(podLabel) {
+    try {
+      checkoutWithTags scm
+      //Checkout the code from the repository
+      stage('Checkout') {
+          echo "Checking out branch: ${env.BRANCH_NAME}"
+          checkout scm
       }
-    }
 
-    stage('Commit SemVer tag') {
-       when { branch 'main' }
-       steps {
-        script {
-          new flowSemver().commitSemver(VERSION)
-        }
+      // => tagging function to identify what actions to take depending on the nature of the changes
+      stage ('tagging') {
+        semversion = taggingv2(newTagEveryMainRun: "${newTagEveryRunMainBranch}")
+        println(semversion)
       }
-    }
 
-    stage('Build and push docker image release') {
-      when { branch 'main' }
-      steps {
-        container('kaniko') {
-          script {
-            semver = VERSION.printable()
+      // => Running the actions for each component in parallel
+      checkoutWithTags scm
 
-            sh """
-              /kaniko/executor -f `pwd`/Dockerfile -c `pwd` \
-              --snapshot-mode=redo --use-new-run  \
-              --destination ${env.ORG}/aws-credentials-broker:$semver
-            """
-
-          }
-        }
+      String jsondata = '''
+      [{"serviceName": "aws-credentials-broker",
+      "dockerImageName": "aws-credentials-broker",
+      "dockerFilePath" : "/Dockerfile"}]
+      '''
+      withCredentials([string(credentialsId: "jenkins-argocd-token", variable: 'ARGOCD_AUTH_TOKEN')]) {
+        mainJenkinsBuildArgo(
+          semversion: "${semversion}",
+          pgImage: "flowcommerce/bentest-postgresql:latest",
+          componentargs: "${jsondata}",
+          sbtOnMain: "${sbtOnMain}",
+          sbtTest: "no"
+          // => optional
+          //orgName: "flowvault"
+          // SBT test
+          //sbtCommand: 'sbt clean flowLint coverage test scalafmtSbtCheck scalafmtCheck doc',
+          //playCpuLimit: "2",
+          //playMemoryRequest: "4Gi",
+          //pgCpuLimit: "1",
+          //pgMemoryRequest: "2Gi",
+          //sbtTestInMain: "${sbtOnMain}"
+        )
       }
-    }
 
-    stage('Deploy Helm chart') {
-      when { branch 'main' }
-      steps {
-        container('helm') {
-          sh(script: """sed -i 's/^appVersion:.*\$/appVersion: "${VERSION.printable()}"/' deploy/aws-credentials-broker*/Chart.yaml""") //XXX: This is the only way to actually set the app version with today's helm
-
-          sh('helm init --client-only')
-          sh('helm plugin install https://github.com/futuresimple/helm-secrets || true')
-
-          sh("helm secrets upgrade --dry-run --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
-          sh("helm secrets upgrade --wait --install --debug  --namespace production --set deployments.live.version=${VERSION.printable()} aws-credentials-broker -f deploy/aws-credentials-broker/secrets.yaml ./deploy/aws-credentials-broker")
-        }
-      }
+    } catch (Exception e) {
+        // In case of an error, mark the build as failure
+        currentBuild.result = 'FAILURE'
+        throw e
+    } finally {
+        // Always clean up workspace and notify if needed
+        cleanWs()
+        echo "Pipeline execution finished"
     }
   }
 }
