@@ -16,7 +16,7 @@ metadata:
     external-dns.alpha.kubernetes.io/ttl: "120"
 spec:
   selector:
-    istio: {{ .Values.ingress.istioSelector }}
+    istio: {{ $.Values.ingress.istioSelector }}
   servers:
     - port:
         number: 80
