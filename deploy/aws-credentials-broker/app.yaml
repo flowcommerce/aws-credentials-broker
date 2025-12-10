@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-credentials-broker
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: production
+    server: 'https://kubernetes.default.svc'
+  ignoreDifferences:
+  - group: networking.istio.io
+    kind: VirtualService
+    jsonPointers:
+    - /spec/http/0
+  - group: "apps"
+    kind: "Deployment"
+    jsonPointers:
+    - /spec/replicas
+  - group: argoproj.io
+    kind: Rollout
+    jsonPointers:
+    - /spec/replicas
+    # Ignore cluster IP changes
+  - group: ""
+    kind: Service
+    jsonPointers:
+    - /spec/clusterIP
+    #This is a common issue with Argo Rollouts and Istio DestinationRule resources. 
+    #The rollouts-pod-template-hash label is automatically managed 
+    #by the Argo Rollouts controller and gets added dynamically during rollout operations
+  - group: networking.istio.io
+    kind: DestinationRule
+    jqPathExpressions:
+    - .spec.subsets[].labels["rollouts-pod-template-hash"]
+    ###################################
+  sources:
+  - repoURL: 'git@github.com:flowcommerce/aws-credentials-broker.git'
+    path: deploy/aws-credentials-broker
+    targetRevision: main
+    helm:
+      parameters:
+      - name: deployments.live.version
+        value: "0.0.44"
+      valueFiles:
+      - values.yaml
+      - secrets.yaml
+
+  project: production
+
+  ## Keep it commenting out during the transition process to avoid auto
+  ## sync applying changes automatically until transition is completed.
+  syncPolicy:
+    syncOptions:
+    - RespectIgnoreDifferences=true
+    - CreateNamespace=false         # Namespace exists
+    - ApplyOutOfSyncOnly=true      # Only sync out-of-sync resources
+    - ServerSideApply=true         # Use server-side apply
+    - PruneLast=true              # Prune after successful sync
+    automated:
+      prune: true
+      selfHeal: true
