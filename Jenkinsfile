@@ -43,7 +43,7 @@ podTemplate(
           pgImage: "flowcommerce/bentest-postgresql:latest",
           componentargs: "${jsondata}",
           sbtOnMain: "${sbtOnMain}",
-          sbtTest: "no"
+          sbtTest: "no",
           // => optional
           //orgName: "flowvault"
           // SBT test
