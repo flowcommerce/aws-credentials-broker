@@ -52,7 +52,8 @@ podTemplate(
           //playMemoryRequest: "4Gi",
           //pgCpuLimit: "1",
           //pgMemoryRequest: "2Gi",
-          //sbtTestInMain: "${sbtOnMain}"
+          //sbtTestInMain: "${sbtOnMain}",
+          buildkit: true
         )
       }
 
