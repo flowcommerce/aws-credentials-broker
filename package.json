@@ -12,7 +12,7 @@
     "build": "node_modules/.bin/parcel build public/index.html --out-dir templates --out-file index.tmpl --public-url ./dist/"
   },
   "dependencies": {
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.23",
     "react": "^16.4.2",
     "react-dom": "^16.4.2"
   },
