@@ -53,7 +53,6 @@ podTemplate(
           //pgCpuLimit: "1",
           //pgMemoryRequest: "2Gi",
           //sbtTestInMain: "${sbtOnMain}",
-          buildkit: true
         )
       }
 
