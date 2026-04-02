@@ -1,7 +1,5 @@
 # aws-credentials-broker
 
-[![Build Status](https://app.travis-ci.com/flowcommerce/aws-credentials-broker.svg?token=ehYmhiZsnqWFWAoybfVc&branch=main)](https://app.travis-ci.com/flowcommerce/aws-credentials-broker)
-
 AWS Credentials Broker - Grants temporary AWS credentials for Google federated users
 
 This app when deployed in your AWS account can grant STS credentials to Google SAML federated users for use in the AWS CLI.
