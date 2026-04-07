@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -51,7 +52,7 @@ func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 
 		tok, err := conf.Exchange(oauth2.NoContext, code)
 		if err != nil {
-			log.Panic(err)
+			slog.Error("OAuth token exchange failed", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
@@ -61,20 +62,20 @@ func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 		parts := strings.Split(idTok, ".")
 		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 		if err != nil {
-			log.Panic(err)
+			slog.Error("Failed to decode ID token payload", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 
 		var idToken IDToken
 		if err := json.Unmarshal([]byte(payload), &idToken); err != nil {
-			log.Panic(err)
+			slog.Error("Failed to unmarshal ID token", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 
 		if hdFilter != "" && hdFilter != idToken.HostedDomain {
-			log.Println(fmt.Sprintf("[WARN] - User [%s] of domain [%s] cannot access [%s]", idToken.Email, idToken.HostedDomain, hdFilter))
+			slog.Warn("User domain not allowed", "email", idToken.Email, "domain", idToken.HostedDomain, "allowed_domain", hdFilter)
 			c.Redirect(http.StatusTemporaryRedirect, "/forbidden")
 			return
 		}
@@ -91,7 +92,7 @@ func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 		})
 		err = sesh.Save()
 		if err != nil {
-			log.Panic(err)
+			slog.Error("Failed to save session", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
@@ -111,7 +112,7 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 
 		user, err := utils.GetUserRoles(accessToken.(string), conf, adminConf)
 		if err != nil {
-			log.Panic(err)
+			slog.Error("Failed to get user roles", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
@@ -176,7 +177,7 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 
 		user, err := utils.GetUserRoles(accessToken.(string), conf, adminConf)
 		if err != nil {
-			log.Panic(err)
+			slog.Error("Failed to get user roles", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
@@ -192,7 +193,7 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 		}
 
 		if roleArn == "" || providerArn == "" {
-			log.Panicf("User cannot assume role %v", requestedRoleArn)
+			slog.Error("User cannot assume role", "requested_role", requestedRoleArn)
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
@@ -208,14 +209,14 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 			WebIdentityToken: aws.String(idToken.(string)),
 		})
 		if err != nil {
-			log.Panicf("User cannot assume role %v: %v", requestedRoleArn, err)
+			slog.Error("Failed to assume role with web identity", "requested_role", requestedRoleArn, "error", err)
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
 
 		callbackURI := fmt.Sprintf("%v", sesh.Get(callbackKey))
 		if callbackURI == "<nil>" || callbackURI == "" {
-			log.Printf("No callback URI cookie:%v", err)
+			slog.Warn("No callback URI cookie", "error", err)
 			c.HTML(http.StatusOK, "index.tmpl", gin.H{
 				"roles_json": gin.H{"error": stateError},
 			})
@@ -224,7 +225,7 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 
 		uri, err := url.Parse(callbackURI)
 		if err != nil {
-			log.Printf("No callback URI cookie:%v", err)
+			slog.Warn("No callback URI cookie", "error", err)
 			c.HTML(http.StatusOK, "index.tmpl", gin.H{
 				"roles_json": gin.H{"error": stateError},
 			})
@@ -309,7 +310,7 @@ func main() {
 			// We need to make sure we're only calling loopback addresses as we only want to post to CLIs
 			match, _ := regexp.MatchString(`^https?://(127(\.\d+){1,3}|localhost)(:[0-9]+)?.*?$`, callbackURI)
 			if !match {
-				log.Printf("User didn't provide a loopback address [%s] as the callback uri", callbackURI)
+				slog.Warn("User didn't provide a loopback address as the callback URI", "callback_uri", callbackURI)
 				c.HTML(http.StatusOK, "index.tmpl", gin.H{
 					"roles_json": gin.H{"error": "You must provide a loopback address as the callback uri..."},
 				})
@@ -322,7 +323,7 @@ func main() {
 			sesh.Options(sessions.Options{HttpOnly: true, Path: "/"})
 			err := sesh.Save()
 			if err != nil {
-				log.Panic(err)
+				slog.Error("Failed to save session", "error", err)
 				c.AbortWithStatus(http.StatusInternalServerError)
 				return
 			}
