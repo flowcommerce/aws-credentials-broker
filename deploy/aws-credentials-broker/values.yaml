@@ -28,6 +28,7 @@ topologySpreadConstraints:
 
 ingress:
   enabled: true
+  istioSelector: ingressgateway-flow-io
   gateways:
     - key: flow-io
       tld: flow.io
@@ -56,3 +57,7 @@ deployments:
     version: master-1
     serviceAccountName: "flow-prod-eks-production-aws-credentials-broker-sa"
     serviceAccountIamRole: "arn:aws:iam::479720515435:role/flow-prod-eks-production-role"
+
+regions:
+  us-east-1: {}
+  us-east-2: {}

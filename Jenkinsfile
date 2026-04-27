@@ -44,6 +44,10 @@ podTemplate(
           componentargs: "${jsondata}",
           sbtOnMain: "${sbtOnMain}",
           sbtTest: "no",
+          // argoActionsv2's PR-diff path extracts the chart version by
+          // grepping app.yaml for generic-charts.git. We use a local chart,
+          // so that grep returns empty and the diff stage errors. Skip it.
+          skipDiff: true,
           // => optional
           //orgName: "flowvault"
           // SBT test
