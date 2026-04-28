@@ -1,5 +1,5 @@
 nameOverride: ""
-fullnameOverride: ""
+fullnameOverride: "aws-credentials-broker"
 
 service:
   port: 8234
