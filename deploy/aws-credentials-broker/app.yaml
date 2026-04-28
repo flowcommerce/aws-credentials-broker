@@ -53,6 +53,8 @@ spec:
       parameters:
       - name: deployments.live.version
         value: "Jenkins_will_update_the_version"
+      - name: region
+        value: "Jenkins_will_update_the_region"
       valueFiles:
       - $values/deploy/aws-credentials-broker/values.yaml
   project: production
