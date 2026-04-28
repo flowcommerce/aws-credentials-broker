@@ -1,5 +1,7 @@
 {{- $fullName := include "deploy.fullname" . -}}
+{{- $region := .Values.region | default "us-east-1" -}}
 {{- range $stage, $deployment := index .Values "deployments" }}
+{{- $regionDeployment := required (printf "regions.%s.deployment.%s is required" $region $stage) (dig $region "deployment" $stage "" $.Values.regions) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,16 +55,6 @@ spec:
                 secretKeyRef:
                   name: aws-credentials-broker
                   key: hosted_domain
-            - name: ALLOWED_ORIGIN
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials-broker
-                  key: allowed_origin
-            - name: GOOGLE_CLIENT_REDIRECT
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials-broker
-                  key: google_client_redirect
             - name: GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -126,6 +118,7 @@ spec:
               value: 'unix:///var/run/datadog/dsd.socket'
             - name: DD_SERVICE_MAPPING
               value: postgresql:{{ $.Chart.Name }}-postgresql,java-aws-sdk:{{ $.Chart.Name }}-aws-sdk"
+{{ toYaml (required (printf "regions.%s.deployment.%s.env is required" $region $stage) $regionDeployment.env) | indent 12 }}
           args: ["production"]
           ports:
             - name: http

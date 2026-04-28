@@ -26,27 +26,8 @@ tolerations:
 topologySpreadConstraints:
   schedule: "DoNotSchedule"
 
-ingress:
-  enabled: true
-  istioSelector: ingressgateway-flow-io
-  gateways:
-    - key: flow-io
-      tld: flow.io
-      hosts:
-        - aws-credentials-broker.flow.io
-
-services:
-  live:
-    stages:
-      - deployment: live
-        weight: 100
-    hosts:
-      - aws-credentials-broker
-      - aws-credentials-broker.flow.io
-    gateways:
-      - mesh
-      - aws-credentials-broker-flow-io
-
+# Non-region-specific deployment fields. Region-specific values (env) live
+# under regions.<region>.deployment.<stage>.
 deployments:
   live:
     minReplicas: 2
@@ -59,5 +40,57 @@ deployments:
     serviceAccountIamRole: "arn:aws:iam::479720515435:role/flow-prod-eks-production-role"
 
 regions:
-  us-east-1: {}
-  us-east-2: {}
+  us-east-1:
+    deployment:
+      live:
+        env:
+          - name: ALLOWED_ORIGIN
+            value: "https://aws-credentials-broker.flow.io"
+          - name: GOOGLE_CLIENT_REDIRECT
+            value: "https://aws-credentials-broker.flow.io/oauth/google/callback"
+    ingress:
+      enabled: true
+      istioSelector: ingressgateway-flow-io
+      gateways:
+        - key: flow-io
+          tld: flow.io
+          hosts:
+            - aws-credentials-broker.flow.io
+    services:
+      live:
+        stages:
+          - deployment: live
+            weight: 100
+        hosts:
+          - aws-credentials-broker
+          - aws-credentials-broker.flow.io
+        gateways:
+          - mesh
+          - aws-credentials-broker-flow-io
+  us-east-2:
+    deployment:
+      live:
+        env:
+          - name: ALLOWED_ORIGIN
+            value: "https://aws-credentials-broker.us-east-2.flow.io"
+          - name: GOOGLE_CLIENT_REDIRECT
+            value: "https://aws-credentials-broker.us-east-2.flow.io/oauth/google/callback"
+    ingress:
+      enabled: true
+      istioSelector: ingressgateway-flow-io
+      gateways:
+        - key: flow-io
+          tld: flow.io
+          hosts:
+            - aws-credentials-broker.us-east-2.flow.io
+    services:
+      live:
+        stages:
+          - deployment: live
+            weight: 100
+        hosts:
+          - aws-credentials-broker
+          - aws-credentials-broker.us-east-2.flow.io
+        gateways:
+          - mesh
+          - aws-credentials-broker-flow-io

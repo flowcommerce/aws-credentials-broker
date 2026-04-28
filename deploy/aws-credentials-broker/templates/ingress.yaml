@@ -1,6 +1,8 @@
 {{- $fullName := include "deploy.fullname" . -}}
-{{- if .Values.ingress.enabled -}}
-{{- range $gateway := .Values.ingress.gateways }}
+{{- $region := .Values.region | default "us-east-1" -}}
+{{- $ingress := required (printf "regions.%s.ingress is required" $region) (dig $region "ingress" "" .Values.regions) -}}
+{{- if $ingress.enabled -}}
+{{- range $gateway := $ingress.gateways }}
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
@@ -16,7 +18,7 @@ metadata:
     external-dns.alpha.kubernetes.io/ttl: "120"
 spec:
   selector:
-    istio: {{ $.Values.ingress.istioSelector }}
+    istio: {{ $ingress.istioSelector }}
   servers:
     - port:
         number: 80

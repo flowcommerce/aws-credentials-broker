@@ -1,5 +1,7 @@
 {{- $fullName := include "deploy.fullname" . -}}
-{{- range $key, $service := index .Values "services" }}
+{{- $region := .Values.region | default "us-east-1" -}}
+{{- $services := required (printf "regions.%s.services is required" $region) (dig $region "services" "" .Values.regions) -}}
+{{- range $key, $service := $services }}
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
