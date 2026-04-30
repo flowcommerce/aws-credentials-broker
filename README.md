@@ -24,6 +24,44 @@ The flow is as follows:
     - Enable API access in Google Admin
     - In Google Admin > Manage API client access. Grant our service account client id the scope `https://www.googleapis.com/auth/admin.directory.user.readonly`
 
+### OAuth client (Flow production)
+
+The live OAuth 2.0 client lives in GCP project number `636048119203`. Manage
+it (including authorized redirect URIs) at:
+
+https://console.cloud.google.com/apis/credentials?project=636048119203
+
+The "Authorized redirect URIs" list must contain one entry per region we
+serve, matching `GOOGLE_CLIENT_REDIRECT` in `deploy/aws-credentials-broker/values.yaml`:
+
+- `https://aws-credentials-broker.flow.io/oauth/google/callback` (us-east-1)
+- `https://aws-credentials-broker.us-east-2.flow.io/oauth/google/callback` (us-east-2 failover)
+
+The client ID and secret are stored in the `aws-credentials-broker` Kubernetes
+secret in the `production` namespace (keys `google_client_id` and
+`google_client_secret`).
+
+#### Who can edit it
+
+The project has no direct IAM bindings — access is inherited from its parent,
+GCP organization `321690732161` (the flow.io org). To see (or grant) who can
+edit the OAuth client, use the org-level IAM pages, making sure the console
+org picker is set to flow.io rather than to the project:
+
+- Members and their roles: https://console.cloud.google.com/iam-admin/iam?organizationId=321690732161
+  — switch the table to "View by roles" and look for `roles/resourcemanager.organizationAdmin`,
+  `roles/iam.securityAdmin`, and any project-scoped grants of `roles/oauthconfig.editor`
+  on project `636048119203`.
+- Custom and predefined role definitions: https://console.cloud.google.com/iam-admin/roles?organizationId=321690732161
+
+A Google Workspace Super Admin does *not* automatically have access here;
+Workspace and GCP IAM are separate systems. A Super Admin can bootstrap
+themselves into `roles/resourcemanager.organizationAdmin` on the linked Cloud
+org by following the
+[organization setup guide](https://cloud.google.com/resource-manager/docs/creating-managing-organization#setting-up),
+after which they can grant `roles/oauthconfig.editor` on project
+`636048119203` to whoever needs to edit redirect URIs.
+
 ## AWS Setup
 
 Assuming you already have a SAML provider & roles setup for Google federated users. You need to add a trust relationship for out Google Client ID.
