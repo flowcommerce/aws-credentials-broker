@@ -39,11 +39,13 @@ type IDToken struct {
 }
 
 const (
-	sessionKey  = "_awscb"
-	idKey       = "_awscb_id"
-	stateKey    = "_awscb_state"
-	callbackKey = "_awscb_call"
-	stateError  = "Unexpected state. Secure session cookies are missing... Please try again."
+	sessionKey   = "_awscb"
+	idKey        = "_awscb_id"
+	stateKey     = "_awscb_state"
+	callbackKey  = "_awscb_call"
+	roleHintKey  = "_awscb_role"
+	listRolesKey = "_awscb_list"
+	stateError   = "Unexpected state. Secure session cookies are missing... Please try again."
 )
 
 func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
@@ -129,6 +131,52 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 			role := rolePattern.FindStringSubmatch(roleArn)[1]
 
 			accounts[account] = append(accounts[account], &RoleChoice{Arn: roleArn, Name: role})
+		}
+
+		if listMode, _ := sesh.Get(listRolesKey).(bool); listMode {
+			callbackURI := fmt.Sprintf("%v", sesh.Get(callbackKey))
+			uri, err := url.Parse(callbackURI)
+			if callbackURI == "<nil>" || callbackURI == "" || err != nil {
+				slog.Warn("No callback URI cookie for list-roles", "error", err)
+				c.HTML(http.StatusOK, "index.tmpl", gin.H{
+					"roles_json": gin.H{"error": stateError},
+				})
+				return
+			}
+
+			payload, err := json.Marshal(accounts)
+			if err != nil {
+				slog.Error("Failed to marshal roles for list mode", "error", err)
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+
+			parameters := url.Values{}
+			parameters.Add("roles", string(payload))
+			uri.RawQuery = parameters.Encode()
+			c.Redirect(http.StatusTemporaryRedirect, uri.String())
+			return
+		}
+
+		if hint, _ := sesh.Get(roleHintKey).(string); hint != "" {
+			var matches []string
+			for _, roles := range accounts {
+				for _, r := range roles {
+					if strings.EqualFold(r.Name, hint) {
+						matches = append(matches, r.Arn)
+					}
+				}
+			}
+			if len(matches) == 1 {
+				c.Request.URL.Path = "/login"
+				c.Request.Method = "POST"
+
+				v := url.Values{}
+				v.Set("role", matches[0])
+				c.Request.PostForm = v
+				ngin.HandleContext(c)
+				return
+			}
 		}
 
 		if len(accounts) == 1 {
@@ -320,6 +368,8 @@ func main() {
 			state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
 			sesh.Set(callbackKey, callbackURI)
 			sesh.Set(stateKey, state)
+			sesh.Set(roleHintKey, c.Query("role"))
+			sesh.Set(listRolesKey, c.Query("list_roles") == "true")
 			sesh.Options(sessions.Options{HttpOnly: true, Path: "/"})
 			err := sesh.Save()
 			if err != nil {
