@@ -353,8 +353,9 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		sesh := sessions.Default(c)
 		tok := sesh.Get(sessionKey)
-		if tok == nil {
-			callbackURI := c.Query("callback_uri")
+
+		callbackURI := c.Query("callback_uri")
+		if callbackURI != "" {
 			// We need to make sure we're only calling loopback addresses as we only want to post to CLIs
 			match, _ := regexp.MatchString(`^https?://(127(\.\d+){1,3}|localhost)(:[0-9]+)?.*?$`, callbackURI)
 			if !match {
@@ -365,14 +366,24 @@ func main() {
 				return
 			}
 
-			state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
 			sesh.Set(callbackKey, callbackURI)
-			sesh.Set(stateKey, state)
 			sesh.Set(roleHintKey, c.Query("role"))
 			sesh.Set(listRolesKey, c.Query("list_roles") == "true")
+		}
+
+		if tok == nil {
+			if callbackURI == "" {
+				slog.Warn("No session and no callback URI provided")
+				c.HTML(http.StatusOK, "index.tmpl", gin.H{
+					"roles_json": gin.H{"error": "You must provide a loopback address as the callback uri..."},
+				})
+				return
+			}
+
+			state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
+			sesh.Set(stateKey, state)
 			sesh.Options(sessions.Options{HttpOnly: true, Path: "/"})
-			err := sesh.Save()
-			if err != nil {
+			if err := sesh.Save(); err != nil {
 				slog.Error("Failed to save session", "error", err)
 				c.AbortWithStatus(http.StatusInternalServerError)
 				return
@@ -382,6 +393,11 @@ func main() {
 			return
 		}
 
+		if err := sesh.Save(); err != nil {
+			slog.Error("Failed to save session", "error", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 		c.Redirect(http.StatusTemporaryRedirect, "/roles")
 	})
 
