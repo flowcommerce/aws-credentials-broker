@@ -119,6 +119,14 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 			return
 		}
 
+		// roleHintKey and listRolesKey are one-shot per CLI flow; consume now so
+		// they don't leak into a later bare /roles visit. callbackKey is kept
+		// here and cleared in /login (or below for the list-mode terminal path).
+		hint, _ := sesh.Get(roleHintKey).(string)
+		listMode, _ := sesh.Get(listRolesKey).(bool)
+		sesh.Delete(roleHintKey)
+		sesh.Delete(listRolesKey)
+
 		accounts := make(map[string][]*RoleChoice)
 		for _, r := range user.Roles.Roles {
 			v := strings.Split(r.Value, ",")
@@ -133,11 +141,15 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 			accounts[account] = append(accounts[account], &RoleChoice{Arn: roleArn, Name: role})
 		}
 
-		if listMode, _ := sesh.Get(listRolesKey).(bool); listMode {
+		if listMode {
 			callbackURI := fmt.Sprintf("%v", sesh.Get(callbackKey))
+			sesh.Delete(callbackKey)
 			uri, err := url.Parse(callbackURI)
 			if callbackURI == "<nil>" || callbackURI == "" || err != nil {
 				slog.Warn("No callback URI cookie for list-roles", "error", err)
+				if err := sesh.Save(); err != nil {
+					slog.Error("Failed to save session", "error", err)
+				}
 				c.HTML(http.StatusOK, "index.tmpl", gin.H{
 					"roles_json": gin.H{"error": stateError},
 				})
@@ -154,11 +166,16 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 			parameters := url.Values{}
 			parameters.Add("roles", string(payload))
 			uri.RawQuery = parameters.Encode()
+			if err := sesh.Save(); err != nil {
+				slog.Error("Failed to save session", "error", err)
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
 			c.Redirect(http.StatusTemporaryRedirect, uri.String())
 			return
 		}
 
-		if hint, _ := sesh.Get(roleHintKey).(string); hint != "" {
+		if hint != "" {
 			var matches []string
 			for _, roles := range accounts {
 				for _, r := range roles {
@@ -199,6 +216,13 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 			}
 		}
 
+		// HTML picker: persist the hint-key deletes; callbackKey stays so the
+		// user's eventual /login POST can read it.
+		if err := sesh.Save(); err != nil {
+			slog.Error("Failed to save session", "error", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"roles_json": accounts,
 		})
@@ -263,8 +287,16 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 		}
 
 		callbackURI := fmt.Sprintf("%v", sesh.Get(callbackKey))
+		// One-shot keys are consumed by this flow regardless of how it ends.
+		sesh.Delete(callbackKey)
+		sesh.Delete(roleHintKey)
+		sesh.Delete(listRolesKey)
+
 		if callbackURI == "<nil>" || callbackURI == "" {
 			slog.Warn("No callback URI cookie", "error", err)
+			if err := sesh.Save(); err != nil {
+				slog.Error("Failed to save session", "error", err)
+			}
 			c.HTML(http.StatusOK, "index.tmpl", gin.H{
 				"roles_json": gin.H{"error": stateError},
 			})
@@ -274,6 +306,9 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 		uri, err := url.Parse(callbackURI)
 		if err != nil {
 			slog.Warn("No callback URI cookie", "error", err)
+			if err := sesh.Save(); err != nil {
+				slog.Error("Failed to save session", "error", err)
+			}
 			c.HTML(http.StatusOK, "index.tmpl", gin.H{
 				"roles_json": gin.H{"error": stateError},
 			})
@@ -287,6 +322,11 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 		parameters.Add("session_token", *cred.SessionToken)
 		uri.RawQuery = parameters.Encode()
 
+		if err := sesh.Save(); err != nil {
+			slog.Error("Failed to save session", "error", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 		c.Redirect(http.StatusTemporaryRedirect, uri.String())
 	}
 }
@@ -353,8 +393,9 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		sesh := sessions.Default(c)
 		tok := sesh.Get(sessionKey)
-		if tok == nil {
-			callbackURI := c.Query("callback_uri")
+
+		callbackURI := c.Query("callback_uri")
+		if callbackURI != "" {
 			// We need to make sure we're only calling loopback addresses as we only want to post to CLIs
 			match, _ := regexp.MatchString(`^https?://(127(\.\d+){1,3}|localhost)(:[0-9]+)?.*?$`, callbackURI)
 			if !match {
@@ -365,14 +406,24 @@ func main() {
 				return
 			}
 
-			state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
 			sesh.Set(callbackKey, callbackURI)
-			sesh.Set(stateKey, state)
 			sesh.Set(roleHintKey, c.Query("role"))
 			sesh.Set(listRolesKey, c.Query("list_roles") == "true")
+		}
+
+		if tok == nil {
+			if callbackURI == "" {
+				slog.Warn("No session and no callback URI provided")
+				c.HTML(http.StatusOK, "index.tmpl", gin.H{
+					"roles_json": gin.H{"error": "You must provide a loopback address as the callback uri..."},
+				})
+				return
+			}
+
+			state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
+			sesh.Set(stateKey, state)
 			sesh.Options(sessions.Options{HttpOnly: true, Path: "/"})
-			err := sesh.Save()
-			if err != nil {
+			if err := sesh.Save(); err != nil {
 				slog.Error("Failed to save session", "error", err)
 				c.AbortWithStatus(http.StatusInternalServerError)
 				return
@@ -382,6 +433,11 @@ func main() {
 			return
 		}
 
+		if err := sesh.Save(); err != nil {
+			slog.Error("Failed to save session", "error", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 		c.Redirect(http.StatusTemporaryRedirect, "/roles")
 	})
 
