@@ -3,7 +3,10 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -12,6 +15,11 @@ import (
 	"golang.org/x/oauth2/jwt"
 	admin "google.golang.org/api/admin/directory/v1"
 )
+
+// ErrInvalidToken signals that the OAuth access token in the session was
+// rejected by Google (typically because it expired). Callers should treat
+// this as "session is dead, restart OAuth" rather than a generic 500.
+var ErrInvalidToken = errors.New("oauth access token rejected by google")
 
 
 // FlexInt is from: https://engineering.bitnami.com/articles/dealing-with-json-with-non-homogeneous-types-in-go.html
@@ -119,9 +127,22 @@ func GetUserRoles(accessToken string, conf *oauth2.Config, config *AdminUserConf
 	defer email.Body.Close()
 	data, _ := ioutil.ReadAll(email.Body)
 
+	// Google returns 401 for an expired/revoked access token. Without this
+	// check, we'd unmarshal the error body into an empty User and then call
+	// the Admin SDK with userKey="", which surfaces as a confusing 400.
+	if email.StatusCode == http.StatusUnauthorized {
+		return nil, ErrInvalidToken
+	}
+	if email.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("userinfo: HTTP %d: %s", email.StatusCode, string(data))
+	}
+
 	var usr User
 	if err = json.Unmarshal(data, &usr); err != nil {
 		return nil, err
+	}
+	if usr.Email == "" {
+		return nil, ErrInvalidToken
 	}
 
 	rls, err := getGoogleAdminUserRoles(usr.Email, config)
