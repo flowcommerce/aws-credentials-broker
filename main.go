@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -45,8 +46,81 @@ const (
 	callbackKey  = "_awscb_call"
 	roleHintKey  = "_awscb_role"
 	listRolesKey = "_awscb_list"
+	expiryKey    = "_awscb_exp"
 	stateError   = "Unexpected state. Secure session cookies are missing... Please try again."
 )
+
+// preAuthMaxAge bounds the pre-OAuth state cookie. Just needs to outlast
+// the user redirecting to Google and back — much shorter than the gorilla
+// CookieStore default of 30 days, which would otherwise leak via Save().
+const preAuthMaxAge = 600
+
+// expiryBuffer is how much earlier than the access token's actual expiry
+// we let the cookie die, so a still-living cookie always implies a
+// still-living token.
+const expiryBuffer = 300
+
+// pinCookieToTokenLifetime sets cookie Options so MaxAge tracks the
+// access token's remaining lifetime (minus expiryBuffer). Returns false
+// if the session has no recorded expiry or the token is already within
+// the buffer window — caller should reauth in that case.
+//
+// Without this, sesh.Save() picks up the gorilla CookieStore default of
+// 30 days, so the browser cookie outlives the access token and the next
+// CLI login redirects to /roles with a dead token (HTTP 500).
+func pinCookieToTokenLifetime(sesh sessions.Session, secure bool) bool {
+	raw := sesh.Get(expiryKey)
+	if raw == nil {
+		return false
+	}
+	var unix int64
+	switch v := raw.(type) {
+	case int64:
+		unix = v
+	case int:
+		unix = int64(v)
+	case float64:
+		unix = int64(v)
+	default:
+		return false
+	}
+	remaining := unix - time.Now().Unix() - expiryBuffer
+	if remaining <= 0 {
+		return false
+	}
+	sesh.Options(sessions.Options{
+		MaxAge:   int(remaining),
+		HttpOnly: true,
+		Secure:   secure,
+		Path:     "/",
+	})
+	return true
+}
+
+// reauth clears the access/id tokens but keeps the CLI handoff hints
+// (callbackKey, roleHintKey, listRolesKey) so the post-OAuth /roles
+// flow can still find them, and starts a fresh OAuth round trip.
+func reauth(c *gin.Context, conf *oauth2.Config, secure bool) {
+	sesh := sessions.Default(c)
+	sesh.Delete(sessionKey)
+	sesh.Delete(idKey)
+	sesh.Delete(expiryKey)
+
+	state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
+	sesh.Set(stateKey, state)
+	sesh.Options(sessions.Options{
+		MaxAge:   preAuthMaxAge,
+		HttpOnly: true,
+		Secure:   secure,
+		Path:     "/",
+	})
+	if err := sesh.Save(); err != nil {
+		slog.Error("Failed to save session", "error", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	c.Redirect(http.StatusTemporaryRedirect, conf.AuthCodeURL(state))
+}
 
 func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -86,8 +160,9 @@ func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 		sesh := sessions.Default(c)
 		sesh.Set(idKey, idTok)
 		sesh.Set(sessionKey, tok.AccessToken)
+		sesh.Set(expiryKey, tok.Expiry.Unix())
 		sesh.Options(sessions.Options{
-			MaxAge:   int(expiresIn.Seconds()) - 300, // Expire 5 minutes before the access token expires
+			MaxAge:   int(expiresIn.Seconds()) - expiryBuffer,
 			HttpOnly: true,
 			Secure:   secure,
 			Path:     "/",
@@ -103,7 +178,7 @@ func callback(conf *oauth2.Config, secure bool) gin.HandlerFunc {
 	}
 }
 
-func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUserConfig) gin.HandlerFunc {
+func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUserConfig, secure bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sesh := sessions.Default(c)
 		accessToken := sesh.Get(sessionKey)
@@ -114,6 +189,11 @@ func listRoles(conf *oauth2.Config, ngin *gin.Engine, adminConf *utils.AdminUser
 
 		user, err := utils.GetUserRoles(accessToken.(string), conf, adminConf)
 		if err != nil {
+			if errors.Is(err, utils.ErrInvalidToken) {
+				slog.Info("Access token rejected by Google; restarting OAuth", "error", err)
+				reauth(c, conf, secure)
+				return
+			}
 			slog.Error("Failed to get user roles", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -235,7 +315,7 @@ func success(c *gin.Context) {
 	})
 }
 
-func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFunc {
+func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig, secure bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestedRoleArn := c.PostForm("role")
 
@@ -249,6 +329,11 @@ func login(conf *oauth2.Config, adminConf *utils.AdminUserConfig) gin.HandlerFun
 
 		user, err := utils.GetUserRoles(accessToken.(string), conf, adminConf)
 		if err != nil {
+			if errors.Is(err, utils.ErrInvalidToken) {
+				slog.Info("Access token rejected by Google; restarting OAuth", "error", err)
+				reauth(c, conf, secure)
+				return
+			}
 			slog.Error("Failed to get user roles", "error", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -387,8 +472,8 @@ func main() {
 	r.LoadHTMLGlob("templates/*.tmpl")
 
 	r.GET("/oauth/google/callback", callback(conf, secure))
-	r.GET("/roles", listRoles(conf, r, adminConf))
-	r.POST("/login", login(conf, adminConf))
+	r.GET("/roles", listRoles(conf, r, adminConf, secure))
+	r.POST("/login", login(conf, adminConf, secure))
 	r.GET("/success", success)
 	r.GET("/", func(c *gin.Context) {
 		sesh := sessions.Default(c)
@@ -422,7 +507,12 @@ func main() {
 
 			state := base64.StdEncoding.EncodeToString(utils.RandToken(32))
 			sesh.Set(stateKey, state)
-			sesh.Options(sessions.Options{HttpOnly: true, Path: "/"})
+			sesh.Options(sessions.Options{
+				MaxAge:   preAuthMaxAge,
+				HttpOnly: true,
+				Secure:   secure,
+				Path:     "/",
+			})
 			if err := sesh.Save(); err != nil {
 				slog.Error("Failed to save session", "error", err)
 				c.AbortWithStatus(http.StatusInternalServerError)
@@ -430,6 +520,17 @@ func main() {
 			}
 
 			c.Redirect(http.StatusTemporaryRedirect, conf.AuthCodeURL(state))
+			return
+		}
+
+		// We have a session token, but the cookie's MaxAge defaults to
+		// 30 days unless we override it on every Save. If we can't pin
+		// the cookie to the access token's known remaining lifetime
+		// (either no expiry recorded, or already past), treat the
+		// session as dead and restart OAuth — the alternative is
+		// redirecting to /roles with a stale token and 500'ing.
+		if !pinCookieToTokenLifetime(sesh, secure) {
+			reauth(c, conf, secure)
 			return
 		}
 
